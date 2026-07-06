@@ -1,0 +1,128 @@
+---
+title: "Apply to site" toggle — live-apply design tokens to the app UI
+date: 2026-07-05
+time: 01:02 PM
+status: in-progress
+workflow: plan-build (7-step Codex + CodeRabbit loop)
+---
+
+# Task: "Apply to site" toggle
+
+User request: add a feature that lets the user toggle applying the current design
+tokens (palette + typography) directly to the website itself. User floated AI and
+a sandbox as options.
+
+Decisions taken in planning:
+
+- Mechanism: runtime override of the app's flat CSS custom properties on
+  `document.documentElement`, fully reversible — this is the "sandbox" (scoped,
+  non-destructive, no persistence). Iframe isolation rejected for MVP.
+- Mapping from the generator's 11-stop scales to the site's flat shadcn-style
+  tokens is deterministic and pure (`lib/site-theme.ts`); AI-assisted mapping is
+  explicitly out of scope but the `SiteThemeVars` contract allows a later swap-in.
+- Scheme-aware (light/dark via `matchMedia`), WCAG-AA-guarded foreground picks.
+
+## Step 1 — Initial plan (Claude Code)
+
+See full plan below (saved as `task_plan.md` for tool ingestion).
+
+<details>
+<summary>task_plan.md (initial draft, pre-Codex review)</summary>
+
+- New pure module `lib/site-theme.ts`: `siteThemeVars({palettes, typography, scheme})`
+  → flat site tokens (`--background` … `--overlay`, `--font-sans`, `--font-mono`),
+  contrast-picked foregrounds, graceful fallbacks for absent roles.
+- New client hook `components/generator/use-site-theme.ts`: applies/removes vars on
+  `<html>`, re-applies on palette edits and scheme change, exact-key cleanup.
+- Toggle button ("Apply to site", `aria-pressed`, `data-testid="apply-to-site-toggle"`)
+  in the inline toolbar of `components/generator/palette-generator.tsx` (the
+  `generator-toolbar.tsx` file is dead code and is not touched).
+- Reuse the runtime Google Fonts loading approach from `font-preview-loader.tsx`.
+- Tests: `__tests__/site-theme.test.ts` (mapping), extended
+  `__tests__/palette-generator.test.tsx` (apply/update/revert lifecycle), optional e2e.
+- Gates: unit tests, lint, typecheck, build.
+
+</details>
+
+## Step 2–3 — Codex plan review & enhancement
+
+Codex (read-only `codex exec`) reviewed `task_plan.md` against the codebase and
+returned 13 findings. All were integrated into plan v2:
+
+1. **Blocker:** `Palette` carries no role identity → mapper signature changed to
+   accept effective `roles: ColorRole[]` (index-aligned with `palettes`).
+2. Stale-var risk on changing token sets → hook now diffs applied keys on every
+   re-apply, not only on OFF/unmount.
+3. Exact restore → snapshot pre-existing inline values (`value`+`priority`) and
+   restore them, not blanket `removeProperty`.
+4. Dark-mode edges → guard missing `matchMedia`, mock it in jsdom, clean listeners;
+   dark `--primary-hover` must be lighter (primary-400); `--overlay` has no dark
+   override in globals.css so it is emitted in both schemes.
+5. `--overlay` must be opaque (dialogs use `bg-overlay/50` modifiers).
+6. Contrast trap: neutral-500 on neutral-50 ≈ 3.4:1 → `--muted` is picked
+   programmatically as darkest stop ≥ 4.5:1 vs surface; AA validation for all pairs.
+7. "Accent" defined: tertiary preset → role named "accent" → secondary/primary fallback.
+8. Stitch wrapper vars beat `:root` inside generator subtree → documented exception.
+9. Fonts: `FontPreviewLoader` already loads all curated families; real work is
+   `fontStack()` from `lib/fonts.ts`; default-typography apply legitimately swaps font.
+10. Runtime Google CSS on chrome = deliberate session-only perf/privacy tradeoff, noted.
+11. `"use client"` on the new hook module.
+12. Gates corrected: `test:unit:run` (not watch-mode `test:unit`), `npx tsc --noEmit`
+    (no typecheck script), lint, build.
+13. Test-plan gaps folded into Step D (matchMedia missing, scheme flip while ON,
+    role removal while ON, pre-existing inline var preservation, unmount cleanup).
+
+## Step 4 — Implementation (Codex)
+
+Codex implemented plan v2 end-to-end:
+
+- `lib/site-theme.ts` — pure `siteThemeVars({roles, palettes, typography, scheme})`
+  mapper: role resolution (primary/neutral/secondary/tertiary-as-accent/error) with
+  fallbacks incl. a desaturated neutral ramp derived from primary; light/dark stop
+  tables; AA-guarded `--muted` and `--accent-subtle-foreground` via candidate walk;
+  contrast-picked foregrounds; opaque `--overlay`; `--destructive*` omitted when no
+  error role; `--font-sans`/`--font-mono` via `fontStack()`.
+- `components/generator/use-site-theme.ts` — `"use client"` hook: snapshots
+  pre-existing inline values (`value` + `priority`) and restores them exactly;
+  diffs applied keys on every re-apply (no stale vars); guarded `matchMedia` with
+  scheme-change listener, cleaned up on disable/unmount.
+- `components/generator/palette-generator.tsx` — session-only "Apply to site"
+  toolbar toggle (`aria-pressed`, `data-testid="apply-to-site-toggle"`), memoized
+  light+dark var sets fed to the hook.
+- `vitest.setup.ts` — configurable `matchMedia` mock with dispatchable scheme changes.
+- Tests: `__tests__/site-theme.test.ts`, `__tests__/use-site-theme.test.tsx`,
+  extended `__tests__/palette-generator.test.tsx`.
+
+Gate results (re-verified by orchestrator outside Codex's offline sandbox):
+
+- `npm run test:unit:run`: **pass** — 21 files, 183 tests.
+- `npx tsc --noEmit`: no errors in any touched file; remaining errors are
+  pre-existing in unrelated `__tests__/auth-context.test.tsx` / `__tests__/seo.test.ts`.
+- `npm run lint`: touched files clean; repo-wide failures are the pre-existing baseline.
+- `npm run build`: **pass** (Codex's sandbox lacked network for Google Fonts; build
+  succeeds with network).
+
+Note: Codex moved stale generated dir `.next-e2e-disabled` (invalid generated TS
+blocking tsc) to `/tmp/ui-color-picker-preview-next-e2e-disabled-backup-20260705-1316`.
+
+## Step 5–6 — CodeRabbit review & resolution
+
+CodeRabbit (`coderabbit review --plain --type uncommitted`) returned **1 finding, minor**:
+
+- `__tests__/use-site-theme.test.tsx` — the "removes the listener on cleanup" test
+  never unmounted, so a broken `removeEventListener` would go undetected.
+  **Fixed:** test now unmounts, flips the scheme afterwards, and asserts vars stay
+  restored. Feature test files re-run: 3 files / 52 tests pass.
+
+No critical architectural or security issues → no re-review required.
+
+## Step 7 — Final status
+
+- Status: **complete**
+- Completed: 2026-07-05 01:40 PM
+- Deliverable: "Apply to site" toggle applying palette + typography tokens to the
+  app chrome via reversible `:root` CSS-variable overrides; scheme-aware; WCAG-AA
+  guarded; no persistence, no server/AI surface. AI-assisted mapping and iframe
+  isolation documented as out-of-scope follow-ups.
+- Temp files (`task_plan.md`, `codex_plan_review.txt`, `coderabbit_review.txt`,
+  `codex_impl.log`) removed after this entry was secured.

@@ -1,0 +1,140 @@
+---
+title: AI apply to site — AI maps palette ramps onto the live site theme
+date: 2026-07-05
+time: 02:05 PM
+status: complete
+workflow: plan-build (7-step Codex + CodeRabbit loop)
+---
+
+# Task: AI-applied site theme
+
+User request: utilize AI to populate the selected color, font, neutral and status
+colors directly to the website for immediate preview. Palette expressed as ramp CSS
+variables (`--primary-50…950`, `--neutral-*`, `--success/warning/error-*`, …); AI
+populates the current website based on all roles (primary, secondary, tertiary, font,
+neutral, status).
+
+Decisions taken in planning:
+
+- This is the "AI-assisted mapping" follow-up explicitly left out of scope by the
+  earlier "Apply to site" task (see `01-02pm-apply-tokens-to-site-toggle.mdx`). All
+  live-theming plumbing (`lib/site-theme.ts`, `use-site-theme.ts`, `applyToSite`
+  toggle) is reused untouched; the new work is the AI layer.
+- AI provider: OpenRouter server-side route (same pattern as the deleted
+  suggest-colors/generate-preview routes at HEAD), gated by `OPENROUTER_API_KEY`;
+  default model bumped to `anthropic/claude-sonnet-4.5`.
+- Contract: client sends ramp vars (`themeToCssVars`) + role identities; AI returns
+  strict JSON `{light, dark}` of chrome-token → `var(--ramp)` ref or ramp hex; server
+  sanitizes to allowlisted tokens with hex-only resolved values (CSS-injection safe),
+  client merges over deterministic `siteThemeVars` and auto-enables Apply to site.
+- Ramp variables themselves are also applied to `:root` so the site carries the
+  user-visible `--primary-50…950`-style block.
+- Fonts stay deterministic (`fontStack` of the picked font) — no AI needed there.
+- AI mapping invalidates on any palette/typography edit (stale picks).
+
+## Step 1 — Initial plan (Claude Code)
+
+Full plan saved as `task_plan.md` for tool ingestion. Summary of planned changes:
+
+- New `lib/ai-site-theme.ts`: prompt builder, tolerant JSON extraction, sanitizer
+  (allowlist + var()-resolution + hex validation + AA foreground fix-up).
+- New `app/api/site-theme/route.ts`: thin POST handler (503 keyless / 400 invalid /
+  502 upstream), OpenRouter call, sanitized `{light, dark}` response.
+- `palette-generator.tsx`: `aiEnabled`/`defaultAiModel` props, "AI theme" toolbar
+  button, `aiSiteVars` state merged into the existing `useSiteTheme` feed,
+  invalidation on edits; `app/page.tsx` threads env-derived props.
+- Tests: `__tests__/ai-site-theme.test.ts`, `__tests__/site-theme-route.test.ts`
+  (new route-test pattern with stubbed fetch/env), extended
+  `__tests__/palette-generator.test.tsx`.
+- Gates: `npm run test:unit:run`, `npx tsc --noEmit`, `npm run lint` (touched files
+  vs. pre-existing baseline), `npm run build`.
+
+## Step 2–3 — Codex plan review & enhancement
+
+Codex (read-only `codex exec`) reviewed plan v1 against the codebase and returned
+10 findings (6 blockers, 3 improvements, 1 nit). All integrated into plan v2:
+
+1. **Blocker:** `withUniqueSlugs` is private in `lib/color.ts` → export it so client
+   role slugs always match the `--<slug>-<shade>` ramp var names sent to the model.
+2. **Blocker:** generator also renders on `app/generate/[hex]/page.tsx` → AI props
+   must be threaded on BOTH pages (HEAD did this for the old AI features).
+3. **Blocker:** in-flight AI responses could apply stale results after palette edits
+   → generation counter + AbortController; responses only land if still current.
+4. **Blocker:** contrast safety net only covered `*-foreground` pairs → new pure
+   post-merge `enforceThemeContrast` also repairs `--foreground`/`--background` and
+   `--muted`/`--surface`, applied client-side after AI+deterministic merge.
+5. **Blocker:** success/warning status colors never reached the site chrome (only
+   error→`--destructive` existed) → add `--success`/`--warning` (+foregrounds) tokens
+   to `globals.css` and emit them from `siteThemeVars`; AI allowlist extended.
+6. **Blocker:** "no free-text user input" was wrong — role names are user-editable
+   and sent to the model → length caps on names/slugs/model, role text treated as
+   data in the prompt.
+7. Stricter ramp validation: bounded keys (`/^--[a-z0-9-]{1,64}$/`), hex-validated
+   values, exact `var(--token)` grammar with no fallback clause.
+8. All-empty sanitized AI output → 502, not a fake success.
+9. Test-plan gaps folded in: stale-request discard, contrast-repair pairs,
+   validation caps, dark-scheme application, both-pages prop threading.
+10. Naming aligned with HEAD (`aiDefaultModel`); import wording fixed (named export).
+
+## Step 4 — Implementation (Codex)
+
+Codex (`codex exec --sandbox workspace-write`) implemented plan v2 with zero deviations:
+
+- **Created:** `lib/ai-site-theme.ts` (prompt builder, tolerant JSON extraction,
+  allowlist+var()-resolution+hex sanitizer, `enforceThemeContrast` post-merge AA
+  repair, request validation with caps), `app/api/site-theme/route.ts` (thin POST:
+  503 keyless / 400 invalid / 502 upstream-or-empty; OpenRouter with Referer/Title
+  headers), `__tests__/ai-site-theme.test.ts`, `__tests__/site-theme-route.test.ts`
+  (new stubbed-fetch/env route-test pattern).
+- **Modified:** `palette-generator.tsx` ("AI theme" toolbar button, `aiSiteVars`
+  merge over deterministic `siteVars` + ramp vars, generation-counter +
+  AbortController stale-request discard, invalidation on any palette/typography
+  edit, inline `role="alert"` error); `lib/color.ts` (export `withUniqueSlugs`);
+  `lib/site-theme.ts` (+ success/warning emission); `app/globals.css` (+ success/
+  warning tokens, light+dark, `@theme inline`); `app/page.tsx` +
+  `app/generate/[hex]/page.tsx` (thread `aiEnabled`/`aiDefaultModel` from env);
+  `env.d.ts`, `.env.example`; extended `site-theme`/`palette-generator`/`page` tests.
+
+Gate results (re-verified by orchestrator outside Codex's offline sandbox):
+
+- `npm run test:unit:run`: **pass** — 24 files, 212 tests (216 after review fixes).
+- `npx tsc --noEmit`: **pass**.
+- ESLint over touched files: **pass** (repo-wide lint noise is pre-existing baseline).
+- `npm run build`: **pass** (Codex's sandbox lacked network for Google Fonts only).
+
+## Step 5–6 — CodeRabbit review & resolution
+
+CodeRabbit (`coderabbit review --plain --type uncommitted`) returned **1 finding,
+minor [Security & Privacy]** — independently spotted by the orchestrator during its
+own skim before the review completed:
+
+- `lib/ai-site-theme.ts` `validateAiSiteThemeRequest`: `preset` accepted an
+  arbitrary-length string while name/slug/model were capped, and `preset` is echoed
+  into the LLM prompt. **Fixed:** `preset` now capped at `MAX_AI_ROLE_NAME_LENGTH`;
+  regression case added to the route test's 400 table ("oversized role preset").
+  Feature test files re-run: pass; full suite, tsc, lint, build re-verified.
+
+No critical architectural or security issues → no re-review required.
+
+## Step 7 — Final status
+
+- Status: **complete**
+- Completed: 2026-07-05 02:50 PM
+- Deliverable: "AI theme" button — sends the palette's ramp CSS variables
+  (`--<slug>-50…950` for every role incl. neutral/status) + role semantics to a new
+  server route; an LLM (OpenRouter) assigns them to the site's chrome tokens for
+  light and dark; sanitized hex-only result is merged over the deterministic mapping
+  and applied live through the existing reversible Apply-to-site pipeline, with the
+  ramp variables themselves also set on `:root`. Status colors gained first-class
+  chrome tokens (`--success`/`--warning` + foregrounds). Fonts applied
+  deterministically from the user's font picks.
+- Concurrent-work notes (not part of this task): mid-task the working tree was
+  concurrently updated — chrome tokens renamed to shadcn-style (`--card`/`--popover`/
+  `--muted-foreground`) consistently across globals.css, site-theme, ai-site-theme
+  and tests, and the default model switched to `openai/gpt-5-nano`; feature re-verified
+  green afterwards. One unrelated failure exists in `__tests__/navbar.test.tsx`
+  (`useRef` not imported in `components/collection/collection-dialog.tsx`, actively
+  being edited).
+- Temp files (`task_plan.md`, `codex_plan_review.txt`, `codex_plan_review.err`,
+  `coderabbit_review.txt`, `coderabbit_review.err`, `codex_impl.log`) removed after
+  this entry was secured.

@@ -1,0 +1,142 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Brand palette: #006d77 teal / #83c5be light teal / #edf6f9 ice /
+   #ffddd2 peach / #e29578 salmon.
+   Salmon (#e29578) is only ~2.2:1 against light surfaces — in shared chrome
+   it may only appear as a fill paired with text-accent-foreground, or via the
+   accent-subtle peach pair. Never text-accent or border-accent alone. */
+:root {
+	--background: #edf6f9;
+	--foreground: #0e2a2d;
+	--card: #ffffff;
+	--card-foreground: #0e2a2d;
+	--popover: #ffffff;
+	--popover-foreground: #0e2a2d;
+	--muted: #ddedec;
+	--muted-foreground: #4a6366;
+	--border: #cbe0de;
+	--input: #a8ccc8;
+	--primary: #006d77;
+	--primary-foreground: #ffffff;
+	--primary-hover: #005a63;
+	--secondary: #83c5be;
+	--secondary-foreground: #0e2a2d;
+	--accent: #e29578;
+	--accent-foreground: #3d1e10;
+	--accent-subtle: #ffddd2;
+	--accent-subtle-foreground: #9a3b1b;
+	--destructive: #b3362b;
+	--destructive-foreground: #ffffff;
+	--success: #0f7a45;
+	--success-foreground: #ffffff;
+	--warning: #b86b00;
+	--warning-foreground: #ffffff;
+	--ring: #006d77;
+	--overlay: #0a1a1c;
+	--radius: 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background: #0b1e20;
+		--foreground: #e8f4f4;
+		--card: #10282b;
+		--card-foreground: #e8f4f4;
+		--popover: #163539;
+		--popover-foreground: #e8f4f4;
+		--muted: #1a393d;
+		--muted-foreground: #9dbfbc;
+		--border: #1f4448;
+		--input: #2e565a;
+		--primary: #83c5be;
+		--primary-foreground: #0b1e20;
+		--primary-hover: #9ad1cb;
+		--secondary: #24484c;
+		--secondary-foreground: #e8f4f4;
+		--accent: #e29578;
+		--accent-foreground: #3d1e10;
+		--accent-subtle: #3e241c;
+		--accent-subtle-foreground: #ffddd2;
+		--destructive: #f2938a;
+		--destructive-foreground: #350d08;
+		--success: #4ade80;
+		--success-foreground: #052e16;
+		--warning: #fbbf24;
+		--warning-foreground: #2b1700;
+		--ring: #83c5be;
+	}
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary-hover: var(--primary-hover);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent-subtle: var(--accent-subtle);
+	--color-accent-subtle-foreground: var(--accent-subtle-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-ring: var(--ring);
+	--color-overlay: var(--overlay);
+	--font-sans: var(--font-google-sans);
+	--font-mono: var(--font-google-sans-code);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+body {
+	background: var(--background);
+	color: var(--foreground);
+	font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Tailwind v4 resets buttons to `cursor: default`; restore the pointer for
+   every enabled interactive control. Utility classes (e.g.
+   disabled:cursor-not-allowed) still win over this base rule. */
+@layer base {
+	button:not(:disabled),
+	[role="button"]:not(:disabled),
+	summary,
+	select:not(:disabled),
+	input[type="checkbox"]:not(:disabled),
+	input[type="radio"]:not(:disabled),
+	input[type="file"]:not(:disabled),
+	label:has(> [role="checkbox"]:not(:disabled)),
+	label:has(> input[type="file"]:not(:disabled)) {
+		cursor: pointer;
+	}
+}
+
+.workspace-scroll-area {
+	container-type: inline-size;
+}
+
+.swatch-grid {
+	grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+}
+
+@container (min-width: 1000px) {
+	.swatch-grid {
+		grid-template-columns: repeat(11, minmax(0, 1fr));
+	}
+}

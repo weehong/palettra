@@ -1,0 +1,61 @@
+# Worklog: Firebase OAuth + Palette Collections + Google Analytics
+
+- **Date:** 2026-07-05
+- **Started:** 11:30am
+- **Task:** Implement Firebase Authentication (Google, Twitter, Facebook OAuth), per-user palette collection storage, and Google Analytics traffic/event tracking.
+- **Workflow:** plan-build multi-agent loop (Claude orchestrator → Codex plan review → Codex implementation → CodeRabbit review → Claude fixes)
+
+## Status Log
+
+- 11:30am — Worklog initialized. Codebase analysis in progress (Next.js 16.2.9 docs + palette state architecture).
+- 11:36am — Analysis complete. Key findings: Next 16.2.9 blesses `@next/third-parties` GoogleAnalytics; Turbopack default (no webpack config); providers wrap `{children}` only. App has zero persistence today; palette state = `{roles, typography, stitchSpec?}` already URL-serializable via `buildThemeHref`. React Query wired but unused. Live action bar is inline in `palette-generator.tsx` (~L489-505); `generator-toolbar.tsx` is dead code.
+- 11:38am — Step 1 complete: comprehensive plan drafted to `task_plan.md` (client-only Firebase architecture, Firestore `users/{uid}/palettes` subcollection, GA4 via @next/third-parties with 20+ event taxonomy + Web Vitals). Sending to Codex for plan review (Step 2).
+
+## Codex Plan Review (Step 2–3)
+
+Codex (109k tokens, read-only sandbox) verdict: **needs changes** — direction sound, gaps found and all integrated into `task_plan.md`:
+
+- **Critical 1 (correctness):** saving raw `roles` would persist stale hexes for auto-derived roles; save now uses the same *effective theme* (`effectiveHex(role, primaryHex)`) as the URL sync, lifted into a shared `useMemo`.
+- **Critical 2 (security):** stored `href` fed to `router.push` is an XSS vector (`javascript:` URLs). Added: Firestore rules key-allowlist + internal-href regex + `request.time` check, and client-side `isSafePaletteHref` gate with rebuild fallback.
+- **Critical 3 (types):** this Next 16's `NextWebVitalsMetric` has no `rating` field — dropped from the Web Vitals event.
+- Improvements adopted: single `AccountControls` dialog owner (prevents duplicate dialogs), explicit React Query invalidation of `["palettes", uid]` on all mutations, plain `<img>` avatars (no next/image config), optional storageBucket, `client-only` guard imports, GA component placed per docs (child of `<html>` after `</body>`), native `<dialog>` styling parity, README notes on build-time env inlining + stitch-spec limitation. Rules emulator tests documented as follow-up (no emulator in CI).
+
+## Implementation (Step 4 — Codex)
+
+Codex implemented the full plan (~399k tokens): 17 files created (lib/firebase.ts, lib/auth-providers.ts, lib/analytics.ts, lib/palette-collection.ts, auth/sign-in/user-menu/account-controls/save-button/collection-dialog/web-vitals components, firestore.rules, 5 test files) and 12 modified (layout, providers, palette-generator, export-dialog, font-picker, preview-overlay, typography-panel, package.json/lock, .env.example, env.d.ts, README). Deps added: firebase@12, @next/third-parties, client-only.
+
+Independently verified by orchestrator with no Firebase/GA env vars: `npm run lint` ✅, `npm run test:unit:run` ✅ (18 files, 163 tests), `npm run build` ✅ (Turbopack). Spot-checked critical items: isSafePaletteHref gate before router.push ✅, gated GoogleAnalytics placement ✅, shared effectiveTheme memo ✅, client-only imports ✅.
+
+Anomaly noted: `app/robots.ts` lost its `host:` field at 11:39:30 (during the plan-review window; not in the plan; type still supports it). Left untouched — flagged to user.
+
+## CodeRabbit Review (Step 5) & Resolution (Step 6)
+
+First pass: 9 findings (4 major, 5 minor). Task-related — all fixed:
+
+1. **firestore.rules (major, security):** `createdAt` unvalidated → split `allow create` (createdAt == request.time) from `allow update` (createdAt immutable), shared `isValidPalette()` function.
+2. **save-palette-button (minor):** save errors invisible → `onError` + "Save failed — retry" label + `palette_save_failed` GA event.
+3. **collection-dialog (minor):** delete/rename errors swallowed → `onError` handlers, `role="alert"` error messages, `palette_mutation_failed` GA event.
+4. **README (minor):** stale "only env var" wording → points to Accounts & Analytics table.
+
+Pre-existing-refactor findings (NOT task scope, left for user): fonts.ts loads all ~48 curated families/9 weights per page (perf, major); fonts.ts weight list may include unsupported per-family weights (major); import-menu.tsx revokes blob URL synchronously after click (minor); info-tip.tsx tooltip hover-only/not keyboard-accessible (minor); palette-generator visible "Submit" vs aria-label "Get the code" WCAG 2.5.3 mismatch (major).
+
+Security fix triggered a Step-5 re-run per workflow; verification pass + full lint/test/build re-run executed.
+
+## Final Status — COMPLETE (12:54pm, 2026-07-05)
+
+- **Result:** Firebase OAuth (Google/Twitter/Facebook), Firestore palette collections (save/list/open/rename/delete), GA4 analytics (~25-event taxonomy + Web Vitals) implemented and verified.
+- **CodeRabbit resolution:** all 4 task-scope findings fixed (hardened create/update Firestore rules with immutable `createdAt`, save/delete/rename error surfaces + failure GA events, README env wording). Verification re-review: **no findings**.
+- **Verification (task scope):** scoped ESLint clean; unit tests 162/163 (sole failure caused by a concurrent user edit changing `DEFAULT_HEX` to `#006d77` while `__tests__/palette-generator.test.tsx:168` still expects `#a543bc` — pre-existing test, not task scope); production build ✅. Full-repo `npm run lint` currently fails only on concurrent user work-in-progress (`.next-e2e-disabled/` artifacts not ESLint-ignored; `e2e/fixtures/auth.ts` rules-of-hooks).
+- **Flags for user:** (1) `app/robots.ts` lost `host:` at 11:39:30 — origin unclear, not in plan, type still supports it; decide keep/revert. (2) Five CodeRabbit findings on the pre-existing refactor left unfixed (fonts payload size, per-family weight support, blob URL revocation timing, info-tip keyboard a11y, Submit/aria-label mismatch). (3) User's concurrent semantic-token styling edits to the new components were preserved.
+- **Manual setup required:** Firebase project + web app config into `.env.local` (see `.env.example`), enable the three auth providers (Twitter keys exist in `$HOME/.credentials`), authorized domains, `firebase deploy --only firestore:rules`, GA4 property + `NEXT_PUBLIC_GA_MEASUREMENT_ID`. Env vars are build-time inlined.
+- **Rollback:** all changes are uncommitted; task-scope files are cleanly separable (new `components/{auth,account,collection,analytics}/`, `lib/{firebase,auth-providers,analytics,palette-collection}.ts`, `firestore.rules`, 5 test files, plus edits to layout/providers/palette-generator/export-dialog/README/.env.example/env.d.ts/package.json).
+- Temporary execution files (`task_plan.md`, `codex_plan_review.txt`, `codex_impl.log`, `coderabbit_review.txt`, `coderabbit_review2.txt`) removed at cleanup.
+
+## Implementation Plan
+
+Summary of the executed plan (full `task_plan.md` removed at cleanup per workflow):
+
+1. **Firebase Auth (client-only)** — `lib/firebase.ts` lazy singleton guarded by `NEXT_PUBLIC_FIREBASE_*` env presence; `AuthProvider` context (`onAuthStateChanged`, popup sign-in with redirect fallback) nested in `app/providers.tsx`; sign-in dialog with Google/Twitter/Facebook; user menu in the generator action bar. Graceful no-op when env vars absent.
+2. **Palette collections (Firestore)** — `users/{uid}/palettes/{id}` docs `{name, roles, typography, href, createdAt, updatedAt}`; pure data layer `lib/palette-collection.ts`; Save button + My Palettes dialog (list/open/rename/delete) via React Query; owner-only `firestore.rules` with field validation.
+3. **Google Analytics** — `@next/third-parties` `<GoogleAnalytics>` in root layout gated on `NEXT_PUBLIC_GA_MEASUREMENT_ID`; typed `lib/analytics.ts` event catalog (~20 events across auth/save/export/import/preview/typography); Web Vitals reporting component.
+4. **Tests** — Vitest units for analytics no-op, palette-collection serialization, auth context transitions, sign-in dialog, save/collection flows; all with `firebase/*` mocked. Build/lint/tests must pass with zero env vars set.

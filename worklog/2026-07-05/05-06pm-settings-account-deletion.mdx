@@ -1,0 +1,99 @@
+---
+title: Settings page with permanent account deletion
+date: 2026-07-05
+time: 05:06 PM
+status: complete
+workflow: plan-build (7-step Codex + CodeRabbit loop)
+---
+
+# Task: Settings page — account deletion
+
+User request: "Create a Setting page that allows user to deactivate their accounts."
+Clarified via AskUserQuestion: **permanent delete** (over soft-deactivate / both) —
+the app is client-only Firebase with no admin backend, so server-side disabling is
+not possible; honest UI wording is "Delete account".
+
+Decisions taken in planning:
+
+- `/settings` page (noindex, not in sitemap) with an auth-status-aware
+  `AccountSettings` client component; "Settings" entry added to the user menu.
+- Deletion sequence in a new `lib/account.ts`: re-authenticate FIRST (popup), then
+  delete all `users/{uid}/palettes` docs (batched, new `deleteAllPalettes` in
+  `lib/palette-collection.ts`), then `deleteUser`. Ordering is load-bearing:
+  reauth-first means an abandoned popup deletes nothing; data-before-auth because
+  Firestore rules orphan the docs once the auth user is gone.
+- Type-DELETE confirmation dialog; popup-cancel returns to idle silently.
+- No Firestore rules changes; no server surface; auth context left untouched.
+
+## Step 1 — Initial plan (Claude Code)
+
+Full plan saved as `task_plan.md` (files, sequence, test matrix, gates).
+
+## Step 2–3 — Codex plan review & enhancement
+
+Codex (read-only `codex exec`) returned 8 findings (3 blockers, 4 improvements,
+1 nit). All integrated into plan v2:
+
+1. **Blocker:** `trackEvent("account_deleted")` fails tsc — `AnalyticsEvent` is a
+   closed union → `lib/analytics.ts` added to the modified-files list.
+2. **Blocker:** provider mapping was underspecified — Firebase `providerData`
+   ids are `google.com`/`twitter.com`/`facebook.com` while `createAuthProvider`
+   takes local ids; the repo supports all three providers, not "Google-only" →
+   explicit mapping table with google fallback.
+3. **Blocker:** no handling for deleteUser failing AFTER palettes were deleted →
+   typed `AccountDeletionError` with stages (precondition/reauth/data/auth-delete);
+   partial-failure alert copy tells the truth and retry is idempotent.
+4. Added `auth/user-cancelled` to the silent user-cancel codes.
+5. Dialog non-dismissibility spelled out: `showCloseButton={false}` + root
+   `onOpenChange` guard while pending.
+6. Settings page must not reuse the home shell's `overflow-hidden` (would clip on
+   small viewports) → scrollable `max-w-2xl` column.
+7. Test placement fixed (`palette-collection.test.ts` for `deleteAllPalettes`),
+   `account.test.ts` must mock analytics + client-only, navbar navigation asserts
+   a hoisted `next/navigation` push spy.
+8. Dropped unused `DeleteAccountResult` type.
+
+## Step 4 — Implementation (Codex)
+
+Codex (`codex exec --sandbox workspace-write`) implemented plan v2, zero deviations:
+
+- **Created:** `lib/account.ts` (`deleteAccount` with staged `AccountDeletionError`
+  — precondition/reauth/data/auth-delete; reauth-first via provider mapping
+  google.com/twitter.com/facebook.com → local ids; data-before-auth ordering;
+  `account_deleted` analytics), `app/settings/page.tsx` (noindex metadata,
+  scrollable `max-w-2xl` column), `components/settings/account-settings.tsx`
+  (status-aware cards; Danger zone; type-DELETE confirm dialog, non-dismissible
+  while pending, silent user-cancel, honest partial-failure copy),
+  `__tests__/account.test.ts`, `__tests__/settings-page.test.tsx`.
+- **Modified:** `lib/palette-collection.ts` (+`deleteAllPalettes`, batched at 500),
+  `lib/analytics.ts` (+`"account_deleted"`), `components/auth/user-menu.tsx`
+  (+Settings menu item → router.push("/settings")),
+  `__tests__/palette-collection.test.ts`, `__tests__/navbar.test.tsx`.
+
+Gate results (re-verified by orchestrator outside Codex's offline sandbox):
+
+- `npm run test:unit:run`: **pass** — 27 files, 244 tests.
+- `npx tsc --noEmit`: **pass**.
+- ESLint over touched files: **pass**.
+- `npm run build`: **pass** (Codex sandbox lacked network for Google Fonts only).
+- Visual check: /settings renders the signed-out card correctly on the local dev
+  server (signed-in flow covered by unit tests; e2e out of scope per plan).
+
+## Step 5–6 — CodeRabbit review & resolution
+
+CodeRabbit (`coderabbit review --plain --type uncommitted`): **no findings**.
+Nothing to resolve; no re-review required.
+
+## Step 7 — Final status
+
+- Status: **complete**
+- Completed: 2026-07-05 05:35 PM
+- Deliverable: `/settings` page (noindex, linked from the account menu) with an
+  account card and a Danger zone that permanently deletes the account: type-DELETE
+  confirmation → re-authentication popup → batched deletion of all saved palettes →
+  Firebase Auth user deletion → redirect home. Abandoned popups delete nothing;
+  partial failures are reported honestly and retry is idempotent. No Firestore
+  rules changes, no server surface.
+- Temp files (`task_plan.md`, `codex_plan_review.txt`, `codex_plan_review.err`,
+  `coderabbit_review.txt`, `coderabbit_review.err`, `codex_impl.log`) removed after
+  this entry was secured.

@@ -1,0 +1,33 @@
+---
+title: Temporarily withdraw "AI theme" + "Apply to site" from the UI; reset toolbar colors
+date: 2026-07-05
+time: 04:20 PM
+status: complete
+---
+
+# Task: temporary withdrawal of site-theming UI
+
+User request: temporarily remove the "AI theme" and "Apply to site" features, and
+reset the toolbar button colors (the per-action color mapping was too messy).
+
+Approach: **gate off, don't delete** — all of the work is uncommitted, so deleting
+files/wiring would lose it permanently. All libs, the API route, hooks, and their
+tests remain in place and passing.
+
+Changes:
+
+- `components/generator/palette-generator.tsx`: new `applyToSiteEnabled?: boolean`
+  prop (default false) gates the Apply-to-site toggle; the AI theme button was
+  already gated by `aiEnabled`.
+- `app/page.tsx` + `app/generate/[hex]/page.tsx`: stopped passing
+  `aiEnabled`/`aiDefaultModel` (comment left in place). **To restore: thread
+  `aiEnabled`, `aiDefaultModel`, and `applyToSiteEnabled` from these two pages.**
+- Toolbar buttons reset: Random/Reset/Preview/AI theme now use the shadcn `outline`
+  variant; only "Get the code" keeps the primary fill. The old per-action
+  secondary/warning/accent/success mapping is removed.
+- Tests updated, none deleted: feature tests now pass the gating props explicitly;
+  new default-hidden assertions; `__tests__/page.test.tsx` threading test inverted
+  to guard the withdrawal (button/toggle absent even with OpenRouter env set).
+
+Gates: `npm run test:unit:run` 25 files / 221 tests pass, `npx tsc --noEmit` clean,
+ESLint clean on touched files, `npm run build` pass.
