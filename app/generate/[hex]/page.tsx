@@ -5,13 +5,25 @@ import { notFound } from "next/navigation";
 import { generatePalette, normalizeHex } from "@/lib/color";
 import { siteConfig } from "@/lib/site-config";
 import type { Theme } from "@/lib/theme";
-import { createPrimaryRole, decodeRoles } from "@/lib/theme";
+import {
+	applyLockedRoles,
+	applySemanticNames,
+	createPrimaryRole,
+	decodeRoles,
+} from "@/lib/theme";
 import { decodeTypography } from "@/lib/typography";
 import { PaletteGenerator } from "@/components/generator/palette-generator";
 
 type GeneratePageProps = {
 	params: Promise<{ hex: string }>;
-	searchParams: Promise<{ colors?: string; type?: string }>;
+	searchParams: Promise<{
+		colors?: string;
+		type?: string;
+		semantic?: string;
+		semanticLocked?: string;
+		primaryName?: string;
+		locked?: string;
+	}>;
 };
 
 export async function generateMetadata({
@@ -62,9 +74,19 @@ export default async function GeneratePage({
 		notFound();
 	}
 
-	const { colors, type } = await searchParams;
+	const { colors, type, semantic, semanticLocked, primaryName, locked } =
+		await searchParams;
+	const primaryRole = createPrimaryRole(normalized);
+	if (primaryName?.trim()) primaryRole.name = primaryName.trim();
+	const roles = applyLockedRoles(
+		applySemanticNames([primaryRole, ...decodeRoles(colors)], semantic),
+		locked,
+	);
 	const theme: Theme = {
-		roles: [createPrimaryRole(normalized), ...decodeRoles(colors)],
+		roles,
+		semanticNamesLocked:
+			semanticLocked === "1" &&
+			roles.some((role) => Object.keys(role.semanticNames ?? {}).length > 0),
 	};
 	const typography = decodeTypography(type);
 

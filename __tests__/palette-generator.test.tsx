@@ -52,6 +52,50 @@ function selectGeneratorTab(name: string): void {
 }
 
 describe("PaletteGenerator", () => {
+	it("keeps locked colors unchanged during randomization", async () => {
+		const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
+		renderGenerator({
+			initialTheme: {
+				roles: [
+					{ id: "primary", name: "Primary", hex: "#a543bc", auto: false },
+					{ id: "secondary", name: "Secondary", hex: "#123456", auto: false },
+				],
+			},
+		});
+
+		fireEvent.click(screen.getByRole("button", { name: "Lock Primary color" }));
+		expect(
+			screen.getByRole("button", { name: "Unlock Primary color" }),
+		).toHaveAttribute("aria-pressed", "true");
+		fireEvent.click(screen.getByRole("button", { name: "Random" }));
+
+		expect(screen.getByRole("textbox", { name: "Primary hex" })).toHaveValue(
+			"#a543bc",
+		);
+		expect(screen.getByRole("textbox", { name: "Secondary hex" })).toHaveValue(
+			"#7fffff",
+		);
+		await waitFor(() => expect(window.location.search).toContain("locked=0"));
+		random.mockRestore();
+	});
+
+	it("respects the primary lock for the spacebar shortcut", () => {
+		const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
+		renderGenerator();
+		const primaryHex = screen.getByRole("textbox", { name: "Primary hex" });
+
+		fireEvent.click(screen.getByRole("button", { name: "Lock Primary color" }));
+		fireEvent.keyDown(window, { code: "Space" });
+		expect(primaryHex).toHaveValue("#a543bc");
+
+		fireEvent.click(
+			screen.getByRole("button", { name: "Unlock Primary color" }),
+		);
+		fireEvent.keyDown(window, { code: "Space" });
+		expect(primaryHex).toHaveValue("#7fffff");
+		random.mockRestore();
+	});
+
 	it("renders the action bar above the generator workspace", () => {
 		renderGenerator();
 		const workspace = screen.getByTestId("generator-workspace");
@@ -67,7 +111,7 @@ describe("PaletteGenerator", () => {
 		).toBeTruthy();
 		expect(
 			screen.getByRole("tablist", { name: "Generator sections" }),
-		).toBeInTheDocument();
+		).toHaveClass("flex-col");
 		expect(screen.getByRole("tab", { name: "Color" })).toHaveClass(
 			"h-10",
 			"rounded-md",
@@ -109,7 +153,8 @@ describe("PaletteGenerator", () => {
 		expect(dialog).toHaveClass(
 			"max-h-[calc(100dvh-2rem)]",
 			"overflow-hidden",
-			"grid-rows-[auto_auto_minmax(0,1fr)_auto]",
+			"flex",
+			"flex-col",
 		);
 		const codePreview = dialog.querySelector("pre");
 		expect(codePreview).not.toBeNull();
@@ -173,11 +218,10 @@ describe("PaletteGenerator", () => {
 		expect(
 			statusTab.querySelector('[data-slot="info-tip-content"]'),
 		).toHaveClass("right-0", "whitespace-normal", "w-64");
-		// The tab list must not clip the tooltip on desktop (it is a horizontal
-		// scroll container only on mobile).
+		// The tab list must not clip the tooltip.
 		expect(
 			screen.getByRole("tablist", { name: "Generator sections" }),
-		).toHaveClass("md:overflow-visible");
+		).toHaveClass("overflow-visible");
 	});
 
 	it("tints each color card with its own 50 shade", () => {
@@ -445,10 +489,12 @@ describe("PaletteGenerator", () => {
 		expect(screen.queryByTestId("preview-overlay")).not.toBeInTheDocument();
 	});
 
-	it("keeps the workspace fixed while the content pane scrolls", () => {
+	it("allows the workspace content lane to grow while its content pane scrolls", () => {
 		renderGenerator();
-		expect(screen.getByTestId("workspace-content")).toHaveClass(
+		expect(screen.getByTestId("workspace-content")).not.toHaveClass(
 			"min-h-0",
+		);
+		expect(screen.getByTestId("workspace-content")).toHaveClass(
 			"overflow-hidden",
 		);
 		expect(screen.getByTestId("workspace-scroll-area")).toHaveClass(
@@ -476,6 +522,49 @@ describe("PaletteGenerator", () => {
 	it("renders one 50–950 scale for the primary by default", () => {
 		renderGenerator();
 		expect(screen.getAllByTestId("swatch")).toHaveLength(11);
+	});
+
+	it("renders swatches at the full width of their grid cells", () => {
+		renderGenerator();
+		expect(screen.getAllByTestId("swatch")[0]).toHaveClass("w-full");
+	});
+
+	it("bulk fills semantic names for one color row by default", () => {
+		renderGenerator();
+		fireEvent.click(screen.getByTestId("add-custom"));
+
+		fireEvent.change(screen.getByRole("textbox", { name: "Primary row semantic name" }), {
+			target: { value: "surface-muted" },
+		});
+
+		const names = screen.getAllByPlaceholderText("Semantic name");
+		for (const name of names.slice(0, 11)) {
+			expect(name).toHaveValue("surface-muted");
+		}
+		for (const name of names.slice(11)) expect(name).toHaveValue("");
+	});
+
+	it("can append shade numbers to a row semantic name", () => {
+		renderGenerator();
+		const primary = screen.getByRole("region", {
+			name: "Primary row semantic names",
+		});
+		fireEvent.click(
+			within(primary).getByRole("checkbox", {
+				name: "Primary apply shade numbers",
+			}),
+		);
+		fireEvent.change(
+			screen.getByRole("textbox", { name: "Primary row semantic name" }),
+			{ target: { value: "brand" } },
+		);
+
+		expect(screen.getByRole("textbox", { name: "50 semantic name" })).toHaveValue(
+			"brand-50",
+		);
+		expect(screen.getByRole("textbox", { name: "200 semantic name" })).toHaveValue(
+			"brand-200",
+		);
 	});
 
 	it("shows the primary base hex", () => {

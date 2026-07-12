@@ -135,7 +135,10 @@ describe("export builders", () => {
 	it("emits DTCG 2025.10 color tokens (object value) per role", () => {
 		const doc = JSON.parse(toFigmaTokens([primary, secondary])) as Record<
 			string,
-			Record<string, { $type: string; $value: { hex: string; colorSpace: string } }>
+			Record<
+				string,
+				{ $type: string; $value: { hex: string; colorSpace: string } }
+			>
 		>;
 		expect(Object.keys(doc)).toEqual(["primary", "secondary"]);
 		expect(Object.keys(doc.primary)).toEqual(SHADES.map(String));
@@ -172,6 +175,17 @@ describe("export builders", () => {
 	it("emits colors only when typography is omitted", () => {
 		const doc = JSON.parse(toFigmaTokens([primary])) as Record<string, unknown>;
 		expect(Object.keys(doc)).toEqual(["primary"]);
+	});
+
+	it("preserves semantic names as aliases to primitive Figma tokens", () => {
+		const doc = JSON.parse(
+			toFigmaTokens([primary], undefined, [{ 200: "surface-muted" }]),
+		) as Record<string, { $type: string; $value: unknown }>;
+
+		expect(doc["surface-muted"]).toEqual({
+			$type: "color",
+			$value: "{primary.200}",
+		});
 	});
 });
 

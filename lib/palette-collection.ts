@@ -30,6 +30,7 @@ export type PaletteDocInput = {
 	roles: Array<ColorRole>;
 	typography: Typography | null;
 	href: string;
+	semanticNamesLocked?: boolean;
 };
 
 export type SavedPalette = PaletteDocInput & {
@@ -44,7 +45,7 @@ type PaletteFirestoreDoc = PaletteDocInput & {
 };
 
 const SAFE_PALETTE_HREF =
-	/^\/generate\/[0-9a-fA-F]{3,8}(\?[\w=&~.%-]*)?$/;
+	/^\/generate\/[0-9a-fA-F]{3,8}(\?[\w=&~.,%!'()*-]*)?$/;
 
 function stripUndefined<T>(value: T): T {
 	if (Array.isArray(value)) {
@@ -77,6 +78,9 @@ export function paletteDocFromState(
 	return {
 		name: `${primary?.name ?? "Palette"} ${hex}`,
 		roles: cleanedTheme.roles,
+		...(cleanedTheme.semanticNamesLocked !== undefined
+			? { semanticNamesLocked: cleanedTheme.semanticNamesLocked }
+			: {}),
 		typography: stripUndefined(typography),
 		href: buildThemeHref(cleanedTheme, typography),
 	};
@@ -124,7 +128,11 @@ export async function listPalettes(
 	uid: string,
 ): Promise<Array<SavedPalette>> {
 	const snapshot = await getDocs(
-		query(palettesCollection(db, uid), orderBy("updatedAt", "desc"), limit(100)),
+		query(
+			palettesCollection(db, uid),
+			orderBy("updatedAt", "desc"),
+			limit(100),
+		),
 	);
 	return snapshot.docs.map((paletteDoc) => {
 		const data = paletteDoc.data();

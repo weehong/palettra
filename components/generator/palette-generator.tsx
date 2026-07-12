@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { Circle, CircleDot } from "lucide-react";
 
-import type { Palette } from "@/lib/color";
+import type { Palette, Shade } from "@/lib/color";
 import { generatePalette, themeToCssVars, withUniqueSlugs } from "@/lib/color";
 import { enforceThemeContrast, type AiSiteTheme } from "@/lib/ai-site-theme";
 import { siteConfig } from "@/lib/site-config";
@@ -150,6 +150,9 @@ export function PaletteGenerator({
 	applyToSiteEnabled = false,
 }: PaletteGeneratorProps): JSX.Element {
 	const [roles, setRoles] = useState<Array<ColorRole>>(initialTheme.roles);
+	const [semanticNamesLocked, setSemanticNamesLocked] = useState(
+		initialTheme.semanticNamesLocked ?? false,
+	);
 	const [typography, setTypography] = useState<Typography>(
 		initialTypography ?? defaultTypography(),
 	);
@@ -182,8 +185,9 @@ export function PaletteGenerator({
 				...role,
 				hex: effectiveHex(role, primaryHex),
 			})),
+			semanticNamesLocked,
 		}),
-		[roles, primaryHex],
+		[roles, primaryHex, semanticNamesLocked],
 	);
 
 	const palettes = useMemo<Array<Palette>>(
@@ -284,7 +288,7 @@ export function PaletteGenerator({
 				event.preventDefault();
 				setRoles((prev) =>
 					prev.map((role, index) =>
-						index === 0 ? { ...role, hex: randomHex() } : role,
+						index === 0 && !role.locked ? { ...role, hex: randomHex() } : role,
 					),
 				);
 			}
@@ -305,6 +309,47 @@ export function PaletteGenerator({
 
 	function handleNameChange(id: string, name: string): void {
 		patchRole(id, { name });
+		setSemanticNamesLocked(false);
+	}
+
+	function handleSemanticNameChange(
+		id: string,
+		shade: Shade,
+		name: string,
+	): void {
+		setRoles((prev) =>
+			prev.map((role) => {
+				if (role.id !== id) return role;
+				const semanticNames = { ...role.semanticNames };
+				if (name) semanticNames[shade] = name;
+				else delete semanticNames[shade];
+				return { ...role, semanticNames };
+			}),
+		);
+		setSemanticNamesLocked(false);
+	}
+
+	function handleBulkSemanticNameChange(
+		id: string,
+		name: string,
+		applyShadeNumbers = false,
+	): void {
+		setRoles((prev) =>
+			prev.map((role) => {
+				if (role.id !== id) return role;
+				const semanticNames = { ...role.semanticNames };
+				for (const { shade } of generatePalette(role.hex).shades) {
+					if (name) {
+						semanticNames[shade] = applyShadeNumbers
+							? `${name}-${shade}`
+							: name;
+					}
+					else delete semanticNames[shade];
+				}
+				return { ...role, semanticNames };
+			}),
+		);
+		setSemanticNamesLocked(false);
 	}
 
 	function handleToggleAuto(id: string): void {
@@ -319,6 +364,14 @@ export function PaletteGenerator({
 				}
 				return { ...role, auto: true };
 			}),
+		);
+	}
+
+	function handleToggleLocked(id: string): void {
+		setRoles((prev) =>
+			prev.map((role) =>
+				role.id === id ? { ...role, locked: !role.locked } : role,
+			),
 		);
 	}
 
@@ -345,6 +398,7 @@ export function PaletteGenerator({
 			}
 			return next;
 		});
+		setSemanticNamesLocked(false);
 		trackEvent("color_role_removed");
 	}
 
@@ -473,7 +527,9 @@ export function PaletteGenerator({
 	function handleRandom(): void {
 		setRoles((prev) =>
 			prev.map((role) =>
-				isColorRole(role) && !role.auto ? { ...role, hex: randomHex() } : role,
+				isColorRole(role) && !role.auto && !role.locked
+					? { ...role, hex: randomHex() }
+					: role,
 			),
 		);
 		trackEvent("random_palette");
@@ -591,7 +647,10 @@ export function PaletteGenerator({
 			onNameChange={handleNameChange}
 			onHexChange={handleHexChange}
 			onToggleAuto={handleToggleAuto}
+			onToggleLocked={handleToggleLocked}
 			onRemove={handleRemove}
+			onSemanticNameChange={handleSemanticNameChange}
+			onBulkSemanticNameChange={handleBulkSemanticNameChange}
 		/>
 	);
 
@@ -775,7 +834,7 @@ export function PaletteGenerator({
 					>
 						<TabsList
 							aria-label="Generator sections"
-							className="text-foreground flex w-full items-stretch justify-start gap-2 overflow-x-auto rounded-none bg-transparent p-0 group-data-[orientation=horizontal]/tabs:h-auto md:flex-col md:overflow-visible"
+							className="text-foreground flex w-full flex-col items-stretch justify-start gap-2 overflow-visible rounded-none bg-transparent p-0 group-data-[orientation=horizontal]/tabs:h-auto"
 						>
 							<TabsTrigger
 								value="color"
@@ -833,7 +892,7 @@ export function PaletteGenerator({
 
 					<div
 						data-testid="workspace-content"
-						className="border-input bg-card relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md border"
+						className="border-input bg-card relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border"
 					>
 						<PreviewOverlay
 							open={isPreviewOpen}
@@ -889,7 +948,7 @@ export function PaletteGenerator({
 										))}
 									</div>
 
-									{colorEntries.map(renderDraggableColorPanel)}
+					{colorEntries.map(renderDraggableColorPanel)}
 								</div>
 
 								<div
@@ -1028,10 +1087,14 @@ export function PaletteGenerator({
 
 			<ExportDialog
 				palettes={palettes}
+				roles={roles}
 				typography={typography}
 				stitchSpec={stitchSpec}
 				open={isExportOpen}
 				onOpenChange={setExportOpen}
+				semanticNamesLocked={semanticNamesLocked}
+				onSemanticNameChange={handleSemanticNameChange}
+				onLockSemanticNames={() => setSemanticNamesLocked(true)}
 			/>
 		</div>
 	);

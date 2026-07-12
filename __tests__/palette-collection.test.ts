@@ -74,11 +74,18 @@ describe("palette collection data helpers", () => {
 		expect(isSafePaletteHref("/generate/12345678?type=Inter~Georgia")).toBe(
 			true,
 		);
+		expect(
+			isSafePaletteHref(
+				"/generate/abc?semantic=0~200~surface-muted&semanticLocked=1",
+			),
+		).toBe(true);
 	});
 
 	it("rejects unsafe palette hrefs", () => {
 		expect(isSafePaletteHref("javascript:alert(1)")).toBe(false);
-		expect(isSafePaletteHref("https://example.com/generate/a543bc")).toBe(false);
+		expect(isSafePaletteHref("https://example.com/generate/a543bc")).toBe(
+			false,
+		);
 		expect(isSafePaletteHref("//example.com/generate/a543bc")).toBe(false);
 		expect(isSafePaletteHref("/settings")).toBe(false);
 	});

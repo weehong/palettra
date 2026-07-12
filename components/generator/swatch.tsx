@@ -21,7 +21,7 @@ export function Swatch({ shade, copied, onCopy }: SwatchProps): JSX.Element {
 			data-testid="swatch"
 			onClick={() => onCopy(shade.hex)}
 			title={`Copy ${shade.hex}`}
-			className="group relative flex h-20 flex-col justify-between rounded-lg p-2 text-left transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:h-24"
+			className="group relative flex h-20 w-full flex-col justify-between rounded-lg p-2 text-left transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:h-24"
 			style={{ backgroundColor: shade.hex, color: textColor }}
 		>
 			<span className="flex items-center justify-between text-xs font-semibold">

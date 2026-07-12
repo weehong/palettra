@@ -17,17 +17,7 @@ import { typographyToFigmaGroups } from "@/lib/typography";
  */
 
 export type Shade =
-	| 50
-	| 100
-	| 200
-	| 300
-	| 400
-	| 500
-	| 600
-	| 700
-	| 800
-	| 900
-	| 950;
+	50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 950;
 
 /** Hue 0–360, saturation/lightness as percentages 0–100. */
 export type Hsl = { h: number; s: number; l: number };
@@ -426,9 +416,12 @@ export function toDtcgColor(hex: string): {
 export function toFigmaTokens(
 	palettes: ReadonlyArray<Palette>,
 	typography?: Typography,
+	semanticNames: ReadonlyArray<Partial<Record<Shade, string>>> = [],
 ): string {
 	const doc: Record<string, Record<string, unknown>> = {};
-	for (const { slug, palette } of withUniqueSlugs(palettes)) {
+	for (const [index, { slug, palette }] of withUniqueSlugs(
+		palettes,
+	).entries()) {
 		const group: Record<string, unknown> = {};
 		for (const shade of palette.shades) {
 			group[`${shade.shade}`] = {
@@ -437,6 +430,12 @@ export function toFigmaTokens(
 			};
 		}
 		doc[slug] = group;
+		for (const [shade, name] of Object.entries(semanticNames[index] ?? {})) {
+			doc[name.trim()] = {
+				$type: "color",
+				$value: `{${slug}.${shade}}`,
+			};
+		}
 	}
 	if (typography) {
 		Object.assign(doc, typographyToFigmaGroups(typography));

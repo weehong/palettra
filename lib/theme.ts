@@ -1,4 +1,4 @@
-import type { Hsl } from "@/lib/color";
+import type { Hsl, Shade } from "@/lib/color";
 import {
 	DEFAULT_HEX,
 	hexToHsl,
@@ -19,12 +19,7 @@ import { encodeTypography, isDefaultTypography } from "@/lib/typography";
  */
 
 export type PresetKey =
-	| "secondary"
-	| "tertiary"
-	| "neutral"
-	| "success"
-	| "warning"
-	| "error";
+	"secondary" | "tertiary" | "neutral" | "success" | "warning" | "error";
 
 export type ColorRole = {
 	id: string;
@@ -32,11 +27,16 @@ export type ColorRole = {
 	hex: string;
 	/** When true the hex is derived from the Primary via {@link ROLE_PRESETS}. */
 	auto: boolean;
+	/** When true, palette randomization leaves this role unchanged. */
+	locked?: boolean;
 	preset?: PresetKey;
+	/** Optional Figma semantic alias for each generated shade. */
+	semanticNames?: Partial<Record<Shade, string>>;
 };
 
 export type Theme = {
 	roles: Array<ColorRole>;
+	semanticNamesLocked?: boolean;
 };
 
 export type HarmonySpec = {
@@ -187,6 +187,67 @@ export function decodeRoles(
 	return roles;
 }
 
+/** Compact share-URL representation: role index, shade, then encoded name. */
+export function encodeSemanticNames(theme: Theme): string {
+	return theme.roles
+		.flatMap((role, roleIndex) =>
+			Object.entries(role.semanticNames ?? {}).map(
+				([shade, name]) =>
+					`${roleIndex}~${shade}~${encodeURIComponent(encodeURIComponent(name.trim()))}`,
+			),
+		)
+		.join(",");
+}
+
+export function applySemanticNames(
+	roles: Array<ColorRole>,
+	value: string | null | undefined,
+): Array<ColorRole> {
+	if (!value) return roles;
+	const next = roles.map((role) => ({ ...role }));
+	for (const entry of value.split(",")) {
+		const [indexValue, shadeValue, encodedName] = entry.split("~");
+		const role = next[Number(indexValue)];
+		const shade = Number(shadeValue) as Shade;
+		if (
+			!role ||
+			!encodedName ||
+			![50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950].includes(shade)
+		)
+			continue;
+		try {
+			const name = decodeURIComponent(encodedName).trim();
+			if (name) role.semanticNames = { ...role.semanticNames, [shade]: name };
+		} catch {
+			// Ignore malformed URL components.
+		}
+	}
+	return next;
+}
+
+/** Compact share-URL representation of locked role indexes. */
+export function encodeLockedRoles(theme: Theme): string {
+	return theme.roles
+		.flatMap((role, index) => (role.locked ? [String(index)] : []))
+		.join(",");
+}
+
+export function applyLockedRoles(
+	roles: Array<ColorRole>,
+	value: string | null | undefined,
+): Array<ColorRole> {
+	if (!value) return roles;
+	const lockedIndexes = new Set(
+		value
+			.split(",")
+			.map(Number)
+			.filter((index) => Number.isInteger(index) && index >= 0),
+	);
+	return roles.map((role, index) =>
+		lockedIndexes.has(index) ? { ...role, locked: true } : role,
+	);
+}
+
 /**
  * Build a `/generate/<primary>` href carrying the extra roles in `?colors`, the
  * non-default typography in `?type`, and the selected preview template in
@@ -200,11 +261,23 @@ export function buildThemeHref(
 	const primary = theme.roles[0]?.hex ?? DEFAULT_HEX;
 	const parts: Array<string> = [];
 	const encoded = encodeRoles(theme);
+	if (theme.roles[0]?.name && theme.roles[0].name !== "Primary") {
+		parts.push(`primaryName=${encodeURIComponent(theme.roles[0].name)}`);
+	}
 	if (encoded.length > 0) {
 		parts.push(`colors=${encoded}`);
 	}
 	if (typography && !isDefaultTypography(typography)) {
 		parts.push(`type=${encodeTypography(typography)}`);
+	}
+	const semanticNames = encodeSemanticNames(theme);
+	if (semanticNames) {
+		parts.push(`semantic=${semanticNames}`);
+		if (theme.semanticNamesLocked) parts.push("semanticLocked=1");
+	}
+	const lockedRoles = encodeLockedRoles(theme);
+	if (lockedRoles) {
+		parts.push(`locked=${lockedRoles}`);
 	}
 	if (previewKey) {
 		parts.push(`preview=${previewKey}`);

@@ -3,15 +3,17 @@
 import type { JSX } from "react";
 import { useMemo, useState } from "react";
 
-import type { Palette } from "@/lib/color";
+import type { Palette, Shade } from "@/lib/color";
 import {
 	toCssVars,
 	toFigmaTokens,
 	toHexList,
 	toTailwindV3,
 	toTailwindV4Oklch,
+	withUniqueSlugs,
 } from "@/lib/color";
 import type { Typography } from "@/lib/typography";
+import type { ColorRole } from "@/lib/theme";
 import type { StitchSpec } from "@/lib/stitch";
 import { serializeStitchSpec } from "@/lib/stitch";
 import { useCopyToClipboard } from "@/components/generator/use-copy-to-clipboard";
@@ -29,10 +31,14 @@ type TabKey = "v4" | "v3" | "css" | "hex" | "figma" | "stitch";
 
 type ExportDialogProps = {
 	palettes: ReadonlyArray<Palette>;
+	roles: ReadonlyArray<ColorRole>;
 	typography: Typography;
 	stitchSpec?: StitchSpec | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	semanticNamesLocked: boolean;
+	onSemanticNameChange: (id: string, shade: Shade, name: string) => void;
+	onLockSemanticNames: () => void;
 };
 
 const BASE_TABS: ReadonlyArray<{ key: TabKey; label: string }> = [
@@ -61,6 +67,7 @@ function buildOutput(
 	typography: Typography,
 	stitchSpec: StitchSpec | null | undefined,
 	tab: TabKey,
+	roles: ReadonlyArray<ColorRole>,
 ): string {
 	switch (tab) {
 		case "v4":
@@ -72,7 +79,11 @@ function buildOutput(
 		case "hex":
 			return toHexList(palettes);
 		case "figma":
-			return toFigmaTokens(palettes, typography);
+			return toFigmaTokens(
+				palettes,
+				typography,
+				roles.map((role) => role.semanticNames ?? {}),
+			);
 		case "stitch":
 			return stitchSpec ? serializeStitchSpec(stitchSpec) : "";
 	}
@@ -94,10 +105,14 @@ function downloadText(text: string, filename: string, mime: string): void {
 /** Accessible export modal. */
 export function ExportDialog({
 	palettes,
+	roles,
 	typography,
 	stitchSpec,
 	open,
 	onOpenChange,
+	semanticNamesLocked,
+	onSemanticNameChange,
+	onLockSemanticNames,
 }: ExportDialogProps): JSX.Element {
 	const [tab, setTab] = useState<TabKey>("v4");
 	const { copiedKey, copy } = useCopyToClipboard();
@@ -105,14 +120,43 @@ export function ExportDialog({
 	const tabs = stitchSpec ? [...BASE_TABS, STITCH_TAB] : BASE_TABS;
 
 	const output = useMemo(
-		() => buildOutput(palettes, typography, stitchSpec, tab),
-		[palettes, typography, stitchSpec, tab],
+		() => buildOutput(palettes, typography, stitchSpec, tab, roles),
+		[palettes, typography, stitchSpec, tab, roles],
 	);
+	const sluggedPalettes = withUniqueSlugs(palettes);
+	const primitiveNames = new Set(sluggedPalettes.map(({ slug }) => slug));
+	const semanticEntries = roles.flatMap((role, roleIndex) =>
+		Object.entries(role.semanticNames ?? {}).map(([shade, name]) => ({
+			role,
+			roleIndex,
+			shade: Number(shade) as Shade,
+			name,
+		})),
+	);
+	const normalizedNames = semanticEntries.map(({ name }) => name.trim());
+	const validationError = semanticEntries.find(({ name }) => {
+		const trimmed = name.trim();
+		return !trimmed || trimmed.startsWith("$") || /[.{}]/.test(trimmed);
+	})
+		? "Names cannot be empty, start with $, or contain periods or braces."
+		: new Set(normalizedNames).size !== normalizedNames.length
+			? "Semantic names must be unique."
+			: normalizedNames.some(
+						(name) =>
+							primitiveNames.has(name) ||
+							["fontFamily", "fontSize", "fontWeight", "lineHeight"].includes(
+								name,
+							),
+				  )
+				? "A semantic name conflicts with an exported token group."
+				: null;
+	const figmaExportDisabled =
+		tab === "figma" && (!semanticNamesLocked || Boolean(validationError));
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-2xl"
+				className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-2xl"
 				aria-describedby={undefined}
 			>
 				<DialogHeader>
@@ -129,7 +173,7 @@ export function ExportDialog({
 							<TabsTrigger
 								key={key}
 								value={key}
-								className="h-10 flex-none rounded-md px-3 text-base font-medium text-muted-foreground transition-colors after:hidden hover:bg-muted hover:text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground group-data-[variant=default]/tabs-list:data-[state=active]:shadow-none dark:text-muted-foreground dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-primary dark:data-[state=active]:text-primary-foreground"
+								className="text-muted-foreground hover:bg-muted hover:text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:text-muted-foreground dark:data-[state=active]:bg-primary dark:data-[state=active]:text-primary-foreground h-10 flex-none rounded-md px-3 text-base font-medium transition-colors after:hidden group-data-[variant=default]/tabs-list:data-[state=active]:shadow-none dark:data-[state=active]:border-transparent"
 							>
 								{label}
 							</TabsTrigger>
@@ -137,13 +181,68 @@ export function ExportDialog({
 					</TabsList>
 				</Tabs>
 
-				<pre className="bg-foreground text-background min-h-0 max-h-none max-w-full overflow-auto rounded-lg p-4 font-mono text-sm leading-relaxed">
+				{tab === "figma" ? (
+					<section
+						aria-label="Semantic token names"
+						className="border-input max-h-52 space-y-3 overflow-auto rounded-lg border p-3"
+					>
+						<div className="flex items-center justify-between gap-3">
+							<div>
+								<h3 className="font-semibold">Semantic names</h3>
+								<p className="text-muted-foreground text-sm">
+									Review aliases before copying or downloading.
+								</p>
+							</div>
+							<Button
+								type="button"
+								variant="outline"
+								disabled={Boolean(validationError)}
+								onClick={onLockSemanticNames}
+							>
+								{semanticNamesLocked ? "Names locked" : "Lock names"}
+							</Button>
+						</div>
+						{semanticEntries.length ? (
+							semanticEntries.map(({ role, roleIndex, shade, name }) => (
+								<label
+									key={`${role.id}-${shade}`}
+									className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm"
+								>
+									<input
+										value={name}
+										onChange={(event) =>
+											onSemanticNameChange(role.id, shade, event.target.value)
+										}
+										aria-label={`${role.name} ${shade} semantic name`}
+										className="border-input bg-background rounded-md border px-2 py-1.5"
+									/>
+									<span className="text-muted-foreground font-mono">
+										→ {sluggedPalettes[roleIndex]?.slug}/{shade}
+									</span>
+								</label>
+							))
+						) : (
+							<p className="text-muted-foreground text-sm">
+								Add semantic names beneath palette swatches, then lock this
+								review.
+							</p>
+						)}
+						{validationError ? (
+							<p role="alert" className="text-destructive text-sm">
+								{validationError}
+							</p>
+						) : null}
+					</section>
+				) : null}
+
+				<pre className="bg-foreground text-background max-h-none min-h-0 max-w-full flex-1 overflow-auto rounded-lg p-4 font-mono text-sm leading-relaxed">
 					<code>{output}</code>
 				</pre>
 
 				<div className="flex justify-end gap-2">
 					<Button
 						variant="outline"
+						disabled={figmaExportDisabled}
 						onClick={() => {
 							const { filename, mime } = DOWNLOADS[tab];
 							downloadText(output, filename, mime);
@@ -153,6 +252,7 @@ export function ExportDialog({
 						Download
 					</Button>
 					<Button
+						disabled={figmaExportDisabled}
 						onClick={() => {
 							copy("export", output);
 							trackEvent("export_copied", { format: tab });
