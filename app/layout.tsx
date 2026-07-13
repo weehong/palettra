@@ -100,7 +100,7 @@ export default function RootLayout({
 				<JsonLd data={getWebApplicationStructuredData()} />
 				<JsonLd data={getOrganizationStructuredData()} />
 				<Providers>
-					<div className="flex h-dvh flex-col">
+					<div className="flex min-h-dvh flex-col md:h-dvh">
 						<WebVitals />
 						<Navbar />
 						{children}

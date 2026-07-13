@@ -707,7 +707,10 @@ export function PaletteGenerator({
 	);
 
 	return (
-		<div className="flex min-h-0 flex-1 flex-col" style={themeStyle}>
+		<div
+			className="flex flex-none flex-col md:min-h-0 md:flex-1"
+			style={themeStyle}
+		>
 			<FontPreviewLoader />
 
 			<Tabs
@@ -718,7 +721,7 @@ export function PaletteGenerator({
 					);
 					setTabIndex(index === -1 ? TAB_COLORS : index);
 				}}
-				className="min-h-0 flex-1 gap-0"
+				className="flex-none gap-0 md:min-h-0 md:flex-1"
 			>
 				<div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
 					<div className="flex flex-wrap items-center gap-2">
@@ -826,7 +829,7 @@ export function PaletteGenerator({
 
 				<div
 					data-testid="generator-workspace"
-					className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden md:flex-row"
+					className="relative flex flex-none flex-col gap-3 overflow-visible md:min-h-0 md:flex-1 md:flex-row md:overflow-hidden"
 				>
 					<aside
 						data-testid="generator-sidebar-lane"
@@ -892,7 +895,7 @@ export function PaletteGenerator({
 
 					<div
 						data-testid="workspace-content"
-						className="border-input bg-card relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border"
+						className="border-input bg-card relative flex min-w-0 flex-none flex-col overflow-visible rounded-md border md:flex-1 md:overflow-hidden"
 					>
 						<PreviewOverlay
 							open={isPreviewOpen}
@@ -903,7 +906,7 @@ export function PaletteGenerator({
 						/>
 						<div
 							data-testid="workspace-scroll-area"
-							className="workspace-scroll-area min-h-0 flex-1 overflow-y-auto"
+							className="workspace-scroll-area flex-none overflow-y-visible md:min-h-0 md:flex-1 md:overflow-y-auto"
 						>
 							<TabsContent
 								value="color"

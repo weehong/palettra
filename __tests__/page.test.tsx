@@ -51,12 +51,14 @@ describe("Home page", () => {
 		expect(screen.getAllByTestId("swatch")).toHaveLength(11);
 	});
 
-	it("keeps the app shell to one viewport without parent scrolling", () => {
+	it("uses page scrolling on small screens and a viewport shell on larger screens", () => {
 		const { container } = render(<Home />);
 		expect(container.querySelector("main")).toHaveClass(
-			"flex-1",
-			"min-h-0",
-			"overflow-hidden",
+			"flex-none",
+			"overflow-visible",
+			"md:flex-1",
+			"md:min-h-0",
+			"md:overflow-hidden",
 		);
 	});
 
@@ -67,9 +69,11 @@ describe("Home page", () => {
 		});
 		const { container } = render(page);
 		expect(container.querySelector("main")).toHaveClass(
-			"flex-1",
-			"min-h-0",
-			"overflow-hidden",
+			"flex-none",
+			"overflow-visible",
+			"md:flex-1",
+			"md:min-h-0",
+			"md:overflow-hidden",
 		);
 	});
 

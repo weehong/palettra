@@ -91,7 +91,7 @@ export default async function GeneratePage({
 	const typography = decodeTypography(type);
 
 	return (
-		<main className="mx-auto flex min-h-0 w-full max-w-none flex-1 flex-col gap-3 overflow-hidden px-5 py-4">
+		<main className="mx-auto flex w-full max-w-none flex-none flex-col gap-3 overflow-visible px-5 py-4 md:min-h-0 md:flex-1 md:overflow-hidden">
 			{/* AI theme + Apply to site temporarily withdrawn: aiEnabled/
 			    aiDefaultModel/applyToSiteEnabled intentionally not passed. */}
 			<PaletteGenerator initialTheme={theme} initialTypography={typography} />

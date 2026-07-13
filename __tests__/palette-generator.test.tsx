@@ -102,7 +102,13 @@ describe("PaletteGenerator", () => {
 		const randomButton = screen.getByRole("button", { name: "Random" });
 
 		expect(workspace).toBeInTheDocument();
-		expect(workspace).toHaveClass("min-h-0", "flex-1");
+		expect(workspace).toHaveClass(
+			"flex-none",
+			"overflow-visible",
+			"md:min-h-0",
+			"md:flex-1",
+			"md:overflow-hidden",
+		);
 		expect(workspace).not.toHaveClass("h-[calc(100vh-13rem)]");
 		expect(workspace).not.toContainElement(randomButton);
 		expect(
@@ -495,12 +501,17 @@ describe("PaletteGenerator", () => {
 			"min-h-0",
 		);
 		expect(screen.getByTestId("workspace-content")).toHaveClass(
-			"overflow-hidden",
+			"flex-none",
+			"overflow-visible",
+			"md:flex-1",
+			"md:overflow-hidden",
 		);
 		expect(screen.getByTestId("workspace-scroll-area")).toHaveClass(
-			"min-h-0",
-			"flex-1",
-			"overflow-y-auto",
+			"flex-none",
+			"overflow-y-visible",
+			"md:min-h-0",
+			"md:flex-1",
+			"md:overflow-y-auto",
 			"workspace-scroll-area",
 		);
 		expect(screen.getByTestId("workspace-scroll-area")).not.toHaveClass(
