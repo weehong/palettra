@@ -89,9 +89,14 @@ export default async function GeneratePage({
 			roles.some((role) => Object.keys(role.semanticNames ?? {}).length > 0),
 	};
 	const typography = decodeTypography(type);
+	const paletteName = generatePalette(normalized).name;
 
 	return (
-		<main className="mx-auto flex w-full max-w-none flex-none flex-col gap-3 overflow-visible px-5 py-4 md:min-h-0 md:flex-1 md:overflow-hidden">
+		<main
+			data-generator-page
+			className="mx-auto flex w-full max-w-none flex-none flex-col gap-3 overflow-visible px-5 py-4 md:min-h-0 md:flex-1 md:overflow-hidden"
+		>
+			<h1 className="sr-only">{paletteName} Tailwind color system</h1>
 			{/* AI theme + Apply to site temporarily withdrawn: aiEnabled/
 			    aiDefaultModel/applyToSiteEnabled intentionally not passed. */}
 			<PaletteGenerator initialTheme={theme} initialTypography={typography} />

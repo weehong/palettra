@@ -7,6 +7,7 @@ import Link from "next/link";
 import { SignInDialog } from "@/components/auth/sign-in-dialog";
 import { UserMenu } from "@/components/auth/user-menu";
 import { CollectionDialog } from "@/components/collection/collection-dialog";
+import { ContinuePaletteLink } from "@/components/generator/continue-palette-link";
 import { trackEvent } from "@/lib/analytics";
 import { siteConfig } from "@/lib/site-config";
 
@@ -20,20 +21,30 @@ export function Navbar(): JSX.Element {
 	}
 
 	return (
-		<header className="flex h-20 shrink-0 items-center justify-between border-b border-border bg-card px-5">
-			<Link href="/" className="text-foreground">
-				<h1 className="text-foreground text-4xl font-normal tracking-normal">
+		<header className="border-border bg-card flex h-20 shrink-0 items-center justify-between border-b px-5">
+			<Link href="/" className="text-foreground flex items-baseline gap-3">
+				<span className="text-foreground text-4xl font-normal tracking-normal">
 					{siteConfig.headline}
-				</h1>
+				</span>
+				<span
+					aria-hidden="true"
+					className="text-muted-foreground hidden text-sm lg:inline"
+				>
+					Tailwind v4 OKLCH color systems from one color
+				</span>
 			</Link>
 			<nav aria-label="Account" className="flex items-center gap-2">
+				<ContinuePaletteLink />
 				<UserMenu
 					onSignInClick={() => setSignInOpen(true)}
 					onOpenCollection={openCollection}
 				/>
 			</nav>
 			<SignInDialog open={signInOpen} onOpenChange={setSignInOpen} />
-			<CollectionDialog open={collectionOpen} onOpenChange={setCollectionOpen} />
+			<CollectionDialog
+				open={collectionOpen}
+				onOpenChange={setCollectionOpen}
+			/>
 		</header>
 	);
 }

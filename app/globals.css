@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Generator routes are desktop workspaces: give their shell a definite height
+   so its flex children can shrink and the shared footer remains in-viewport.
+   Content-led marketing/legal routes keep the normal min-height behavior. */
+@media (min-width: 48rem) {
+	body:has([data-generator-page]) [data-app-shell] {
+		height: 100dvh;
+	}
+}
+
 /* Brand palette: #006d77 teal / #83c5be light teal / #edf6f9 ice /
    #ffddd2 peach / #e29578 salmon.
    Salmon (#e29578) is only ~2.2:1 against light surfaces — in shared chrome

@@ -64,9 +64,11 @@ describe("Navbar", () => {
 
 		const brand = screen.getByRole("link", { name: siteConfig.name });
 		expect(brand).toHaveAttribute("href", "/");
-		expect(
-			screen.getByRole("heading", { level: 1, name: siteConfig.headline }),
-		).toHaveClass("text-4xl", "font-normal", "tracking-normal");
+		expect(brand.firstElementChild).toHaveClass(
+			"text-4xl",
+			"font-normal",
+			"tracking-normal",
+		);
 		expect(
 			screen.queryByRole("button", { name: "Sign in" }),
 		).not.toBeInTheDocument();

@@ -216,7 +216,18 @@ export function applySemanticNames(
 		)
 			continue;
 		try {
-			const name = decodeURIComponent(encodedName).trim();
+			// Shared URLs double-encode semantic names so Next/browser query parsing
+			// can consume one layer before this decoder runs. Decode a second layer
+			// when the raw encoded value is passed directly (for example in tests or
+			// other API callers), while keeping already-decoded route values working.
+			const once = decodeURIComponent(encodedName);
+			let decoded = once;
+			try {
+				decoded = decodeURIComponent(once);
+			} catch {
+				// A literal percent sign is valid in a name but not a URI escape.
+			}
+			const name = decoded.trim();
 			if (name) role.semanticNames = { ...role.semanticNames, [shade]: name };
 		} catch {
 			// Ignore malformed URL components.

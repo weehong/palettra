@@ -42,7 +42,8 @@ import { TypographyPanel } from "@/components/generator/typography-panel";
 import { useCopyToClipboard } from "@/components/generator/use-copy-to-clipboard";
 import { useSiteTheme } from "@/components/generator/use-site-theme";
 import { Spinner } from "@/components/ui/spinner";
-import { trackEvent } from "@/lib/analytics";
+import { trackEvent, trackEventOnce } from "@/lib/analytics";
+import { rememberPaletteHref } from "@/lib/recent-palette";
 
 type PaletteGeneratorProps = {
 	initialTheme: Theme;
@@ -255,11 +256,12 @@ export function PaletteGenerator({
 			return;
 		}
 		if (typeof window !== "undefined") {
-			window.history.replaceState(
-				null,
-				"",
-				buildThemeHref(effectiveTheme, typography),
-			);
+			const href = buildThemeHref(effectiveTheme, typography);
+			window.history.replaceState(null, "", href);
+			rememberPaletteHref(href);
+			trackEventOnce("palette-edit", "palette_edit_started", {
+				role_count: effectiveTheme.roles.length,
+			});
 		}
 	}, [effectiveTheme, typography]);
 
@@ -343,8 +345,7 @@ export function PaletteGenerator({
 						semanticNames[shade] = applyShadeNumbers
 							? `${name}-${shade}`
 							: name;
-					}
-					else delete semanticNames[shade];
+					} else delete semanticNames[shade];
 				}
 				return { ...role, semanticNames };
 			}),
@@ -951,7 +952,7 @@ export function PaletteGenerator({
 										))}
 									</div>
 
-					{colorEntries.map(renderDraggableColorPanel)}
+									{colorEntries.map(renderDraggableColorPanel)}
 								</div>
 
 								<div
@@ -1098,6 +1099,7 @@ export function PaletteGenerator({
 				semanticNamesLocked={semanticNamesLocked}
 				onSemanticNameChange={handleSemanticNameChange}
 				onLockSemanticNames={() => setSemanticNamesLocked(true)}
+				shareHref={buildThemeHref(effectiveTheme, typography)}
 			/>
 		</div>
 	);

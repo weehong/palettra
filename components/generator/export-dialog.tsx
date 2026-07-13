@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trackEvent } from "@/lib/analytics";
+import { trackEventOnce } from "@/lib/analytics";
+import { rememberPaletteHref } from "@/lib/recent-palette";
 
 type TabKey = "v4" | "v3" | "css" | "hex" | "figma" | "stitch";
 
@@ -39,6 +41,7 @@ type ExportDialogProps = {
 	semanticNamesLocked: boolean;
 	onSemanticNameChange: (id: string, shade: Shade, name: string) => void;
 	onLockSemanticNames: () => void;
+	shareHref: string;
 };
 
 const BASE_TABS: ReadonlyArray<{ key: TabKey; label: string }> = [
@@ -113,6 +116,7 @@ export function ExportDialog({
 	semanticNamesLocked,
 	onSemanticNameChange,
 	onLockSemanticNames,
+	shareHref,
 }: ExportDialogProps): JSX.Element {
 	const [tab, setTab] = useState<TabKey>("v4");
 	const { copiedKey, copy } = useCopyToClipboard();
@@ -152,6 +156,15 @@ export function ExportDialog({
 				: null;
 	const figmaExportDisabled =
 		tab === "figma" && (!semanticNamesLocked || Boolean(validationError));
+
+	function trackActivation(method: "copy" | "download"): void {
+		trackEventOnce("palette-activated", "palette_activated", {
+			format: tab,
+			method,
+			role_count: palettes.length,
+		});
+		rememberPaletteHref(shareHref);
+	}
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -242,11 +255,24 @@ export function ExportDialog({
 				<div className="flex justify-end gap-2">
 					<Button
 						variant="outline"
+						onClick={() => {
+							const absoluteHref = new URL(shareHref, window.location.origin)
+								.href;
+							void copy("share", absoluteHref);
+							rememberPaletteHref(shareHref);
+							trackEvent("share_copied", { location: "export_dialog" });
+						}}
+					>
+						{copiedKey === "share" ? "Link copied!" : "Copy share link"}
+					</Button>
+					<Button
+						variant="outline"
 						disabled={figmaExportDisabled}
 						onClick={() => {
 							const { filename, mime } = DOWNLOADS[tab];
 							downloadText(output, filename, mime);
 							trackEvent("export_downloaded", { format: tab });
+							trackActivation("download");
 						}}
 					>
 						Download
@@ -254,8 +280,9 @@ export function ExportDialog({
 					<Button
 						disabled={figmaExportDisabled}
 						onClick={() => {
-							copy("export", output);
+							void copy("export", output);
 							trackEvent("export_copied", { format: tab });
+							trackActivation("copy");
 						}}
 					>
 						{copiedKey === "export" ? "Copied!" : "Copy"}

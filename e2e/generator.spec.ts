@@ -3,7 +3,10 @@ import { expect, test } from "@playwright/test";
 test("home page renders the palette generator", async ({ page }) => {
 	await page.goto("/");
 	await expect(
-		page.getByRole("heading", { level: 1, name: "Palettra" }),
+		page.getByRole("heading", {
+			level: 1,
+			name: /Generate a Tailwind v4 OKLCH color system/i,
+		}),
 	).toBeVisible();
 	await expect(page.getByTestId("swatch")).toHaveCount(11);
 });
@@ -36,6 +39,7 @@ test("seeded /generate/[hex] shows the base color and syncs the URL", async ({
 	await expect(page.getByText("Base", { exact: true })).toBeVisible();
 
 	const lightness = page.getByLabel("Lightness").first();
+	await expect(lightness).toHaveAttribute("aria-valuenow", "50");
 	await lightness.focus();
 	await lightness.press("ArrowLeft");
 	await expect.poll(() => page.url()).not.toContain("a543bc");

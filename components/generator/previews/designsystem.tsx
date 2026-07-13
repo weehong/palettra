@@ -118,7 +118,7 @@ function ColorsSection({
 	return (
 		<Section
 			title="Color"
-			caption="50–950 scale · badge = WCAG contrast of text on the 600 shade"
+			caption="50–950 scale · WCAG AA: 4.5:1 normal text, 3:1 large text"
 		>
 			<div className="flex flex-col gap-4">
 				{palettes.map((palette) => {

@@ -67,3 +67,19 @@ test("Copy toggles to a confirmation label", async ({ page, context }) => {
 	await page.getByRole("button", { name: "Copy", exact: true }).click();
 	await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible();
 });
+
+test("copies the shareable palette link from the export dialog", async ({
+	page,
+	context,
+}) => {
+	await context
+		.grantPermissions(["clipboard-read", "clipboard-write"])
+		.catch(() => {});
+	await page.goto("/generate/a543bc");
+	await page.getByRole("button", { name: "Export" }).click();
+
+	await page.getByRole("button", { name: "Copy share link" }).click();
+	await expect(
+		page.getByRole("button", { name: "Link copied!" }),
+	).toBeVisible();
+});

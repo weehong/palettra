@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { POPULAR_COLOR_HEXES } from "@/lib/seo";
+import { GROWTH_PAGES } from "@/lib/growth-pages";
 
 /**
  * site-config resolves its URL and indexability at module load, so each
@@ -103,7 +104,9 @@ describe("sitemap", () => {
 		const { default: sitemap } = await import("@/app/sitemap");
 		const entries = sitemap();
 
-		expect(entries).toHaveLength(3 + POPULAR_COLOR_HEXES.length);
+		expect(entries).toHaveLength(
+			3 + GROWTH_PAGES.length + POPULAR_COLOR_HEXES.length,
+		);
 		expect(entries[0]?.url).toBe(siteConfig.url);
 		expect(entries.some((e) => e.url === `${siteConfig.url}/terms`)).toBe(true);
 		expect(entries.some((e) => e.url === `${siteConfig.url}/privacy`)).toBe(
@@ -116,6 +119,9 @@ describe("sitemap", () => {
 			expect(entries.some((e) => e.url.endsWith(`/generate/${hex}`))).toBe(
 				true,
 			);
+		}
+		for (const { slug } of GROWTH_PAGES) {
+			expect(entries.some((e) => e.url.endsWith(`/tools/${slug}`))).toBe(true);
 		}
 	});
 
