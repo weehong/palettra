@@ -30,9 +30,9 @@ describe("Home page", () => {
 			siteConfig.caption.length,
 		);
 		expect(caption).toHaveClass("rounded-md", "border", "p-4", "md:mt-auto");
-		expect(
-			screen.getByTestId("generator-sidebar-lane"),
-		).toContainElement(caption);
+		expect(screen.getByTestId("generator-sidebar-lane")).toContainElement(
+			caption,
+		);
 		expect(document.querySelector("main > header")).not.toBeInTheDocument();
 
 		const page = await GeneratePage({
@@ -75,6 +75,23 @@ describe("Home page", () => {
 			"md:min-h-0",
 			"md:overflow-hidden",
 		);
+	});
+
+	it("applies a different generated palette during client-side navigation", async () => {
+		const firstPage = await GeneratePage({
+			params: Promise.resolve({ hex: "a543bc" }),
+			searchParams: Promise.resolve({}),
+		});
+		const { rerender } = render(firstPage);
+		expect(screen.getByLabelText("Primary hex")).toHaveValue("#a543bc");
+
+		const secondPage = await GeneratePage({
+			params: Promise.resolve({ hex: "2563eb" }),
+			searchParams: Promise.resolve({}),
+		});
+		rerender(secondPage);
+
+		expect(screen.getByLabelText("Primary hex")).toHaveValue("#2563eb");
 	});
 
 	// AI theme + Apply to site are temporarily withdrawn: pages must not thread

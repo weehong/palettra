@@ -69,9 +69,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Public site metadata is centralized in `lib/site-config.ts`.
 
-| Variable               | Required | Description                                                                                 |
-| ---------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL` | No       | Canonical site origin. Defaults to localhost, or Vercel's production domain when available. |
+| Variable               | Required | Description                                                                                         |
+| ---------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL` | No       | Canonical origin. Defaults to localhost in development and `https://palettra.design` in production. |
 
 Copy `.env.example` to `.env.local` for local Firebase and analytics settings.
 

@@ -21,7 +21,7 @@ export function GrowthCta({
 	return (
 		<Link
 			href={href}
-			className={cn(buttonVariants(), "px-6 font-semibold")}
+			className={cn(buttonVariants({ size: "lg" }), "font-semibold")}
 			onClick={() => trackEvent("landing_cta_clicked", { landing })}
 		>
 			{label}

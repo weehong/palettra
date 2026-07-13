@@ -123,6 +123,18 @@ export async function savePalette(
 	return docRef.id;
 }
 
+export async function updatePalette(
+	db: Firestore,
+	uid: string,
+	id: string,
+	input: PaletteDocInput,
+): Promise<void> {
+	await updateDoc(doc(db, "users", uid, "palettes", id), {
+		...stripUndefined(input),
+		updatedAt: serverTimestamp(),
+	});
+}
+
 export async function listPalettes(
 	db: Firestore,
 	uid: string,
@@ -140,6 +152,9 @@ export async function listPalettes(
 			id: paletteDoc.id,
 			name: data.name,
 			roles: data.roles,
+			...(data.semanticNamesLocked !== undefined
+				? { semanticNamesLocked: data.semanticNamesLocked }
+				: {}),
 			typography: data.typography,
 			href: data.href,
 			createdAt: timestampToIso(data.createdAt),

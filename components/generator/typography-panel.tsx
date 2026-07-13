@@ -211,7 +211,7 @@ export function TypographyPanel({
 							variant="outline"
 							data-testid="remove-typography"
 							onClick={onRemove}
-							className="w-fit px-3"
+							className="w-fit"
 						>
 							Remove Fonts
 						</Button>
@@ -220,7 +220,7 @@ export function TypographyPanel({
 						variant="outline"
 						data-testid="add-typography"
 						onClick={addTypographySample}
-						className="w-fit px-3"
+						className="w-fit"
 					>
 						Add Typography
 					</Button>

@@ -2,7 +2,7 @@
 
 import type { ChangeEvent, JSX } from "react";
 import { useState } from "react";
-import { Lock, LockOpen } from "lucide-react";
+import { Lock, LockOpen, X } from "lucide-react";
 
 import type { Palette, Shade } from "@/lib/color";
 import { isValidHex, normalizeHex } from "@/lib/color";
@@ -10,6 +10,7 @@ import type { ColorRole } from "@/lib/theme";
 import { HslSliders } from "@/components/generator/hsl-sliders";
 import { SwatchRow } from "@/components/generator/swatch-row";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type ColorRolePanelProps = {
@@ -33,6 +34,34 @@ type ColorRolePanelProps = {
 	) => void;
 };
 
+function semanticRowValue(
+	palette: Palette,
+	semanticNames: ColorRole["semanticNames"],
+): { name: string; applyShadeNumbers: boolean } {
+	const entries = palette.shades.map(({ shade }) => ({
+		shade,
+		name: semanticNames?.[shade] ?? "",
+	}));
+	if (entries.some((entry) => !entry.name)) {
+		return { name: "", applyShadeNumbers: false };
+	}
+
+	const sharedName = entries[0]?.name ?? "";
+	if (entries.every((entry) => entry.name === sharedName)) {
+		return { name: sharedName, applyShadeNumbers: false };
+	}
+
+	const prefix = entries[0]?.name.slice(0, -`-${entries[0].shade}`.length) ?? "";
+	if (
+		prefix &&
+		entries.every((entry) => entry.name === `${prefix}-${entry.shade}`)
+	) {
+		return { name: prefix, applyShadeNumbers: true };
+	}
+
+	return { name: "", applyShadeNumbers: false };
+}
+
 /** One color role: name, hex entry, auto toggle, sliders, and its 50–950 scale. */
 export function ColorRolePanel({
 	role,
@@ -53,15 +82,25 @@ export function ColorRolePanel({
 	const effectiveHex = palette.baseHex;
 	const [draft, setDraft] = useState<string>(effectiveHex);
 	const [syncedHex, setSyncedHex] = useState<string>(effectiveHex);
-	const [bulkSemanticName, setBulkSemanticName] = useState("");
-	const [applySemanticShadeNumbers, setApplySemanticShadeNumbers] =
-		useState(false);
+	const semanticRow = semanticRowValue(palette, role.semanticNames);
+	const semanticNamesKey = palette.shades
+		.map(({ shade }) => role.semanticNames?.[shade] ?? "")
+		.join("\0");
+	const [syncedSemanticNamesKey, setSyncedSemanticNamesKey] =
+		useState(semanticNamesKey);
+	const [applySemanticShadeNumbers, setApplySemanticShadeNumbers] = useState(
+		semanticRow.applyShadeNumbers,
+	);
 
 	// Adopt externally-driven hex changes (sliders, auto-derivation, primary edits)
 	// during render instead of via a state-setting effect.
 	if (effectiveHex !== syncedHex) {
 		setSyncedHex(effectiveHex);
 		setDraft(effectiveHex);
+	}
+	if (semanticNamesKey !== syncedSemanticNamesKey) {
+		setSyncedSemanticNamesKey(semanticNamesKey);
+		setApplySemanticShadeNumbers(semanticRow.applyShadeNumbers);
 	}
 
 	const isInvalid = !isValidHex(draft);
@@ -120,20 +159,22 @@ export function ColorRolePanel({
 						aria-invalid={isInvalid}
 						className="w-28 px-2 font-mono"
 					/>
-					<button
+					<Button
 						type="button"
+						variant="ghost"
+						size="icon-sm"
 						onClick={() => onToggleLocked(role.id)}
 						aria-label={`${role.locked ? "Unlock" : "Lock"} ${role.name} color`}
 						aria-pressed={role.locked ?? false}
 						title={role.locked ? "Unlock color" : "Lock color"}
-						className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-md p-2"
+						className="text-muted-foreground"
 					>
 						{role.locked ? (
 							<Lock className="h-4 w-4" aria-hidden="true" />
 						) : (
 							<LockOpen className="h-4 w-4" aria-hidden="true" />
 						)}
-					</button>
+					</Button>
 
 					{!isPrimary ? (
 						<label className="text-muted-foreground flex items-center gap-1.5 text-sm font-medium">
@@ -147,14 +188,16 @@ export function ColorRolePanel({
 						</label>
 					) : null}
 					{canRemove ? (
-						<button
+						<Button
 							type="button"
+							variant="ghost"
+							size="icon-sm"
 							onClick={() => onRemove(role.id)}
 							aria-label={`Remove ${role.name}`}
-							className="text-muted-foreground hover:bg-muted hover:text-destructive rounded-md px-2 py-1 text-base"
+							className="text-muted-foreground hover:text-destructive"
 						>
-							✕
-						</button>
+							<X aria-hidden="true" />
+						</Button>
 					) : null}
 				</div>
 			</div>
@@ -166,10 +209,9 @@ export function ColorRolePanel({
 				<label className="min-w-0 flex-1 space-y-1 text-sm font-medium">
 					<span>Row semantic name</span>
 					<Input
-						value={bulkSemanticName}
+						value={semanticRow.name}
 						onChange={(event) => {
 							const name = event.target.value;
-							setBulkSemanticName(name);
 							onBulkSemanticNameChange(
 								role.id,
 								name,
@@ -187,11 +229,7 @@ export function ColorRolePanel({
 						onCheckedChange={(checked) => {
 							const enabled = Boolean(checked);
 							setApplySemanticShadeNumbers(enabled);
-						onBulkSemanticNameChange(
-							role.id,
-							bulkSemanticName,
-							enabled,
-							);
+							onBulkSemanticNameChange(role.id, semanticRow.name, enabled);
 						}}
 					/>
 					Apply shade numbers

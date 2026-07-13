@@ -60,8 +60,29 @@ describe("siteConfig.url resolution", () => {
 			NEXT_PUBLIC_SITE_URL: undefined,
 			VERCEL_PROJECT_PRODUCTION_URL: undefined,
 			VERCEL_URL: undefined,
+			NODE_ENV: "development",
 		});
 		expect(siteConfig.url).toBe("http://localhost:3000");
+	});
+
+	it("defaults to the canonical domain when production URL variables are missing", async () => {
+		const { siteConfig } = await loadSiteConfig({
+			NEXT_PUBLIC_SITE_URL: undefined,
+			VERCEL_PROJECT_PRODUCTION_URL: undefined,
+			VERCEL_URL: undefined,
+			NODE_ENV: "production",
+		});
+		expect(siteConfig.url).toBe("https://palettra.design");
+	});
+
+	it("does not publish a loopback URL from a production build", async () => {
+		const { siteConfig } = await loadSiteConfig({
+			NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
+			VERCEL_PROJECT_PRODUCTION_URL: undefined,
+			VERCEL_URL: undefined,
+			NODE_ENV: "production",
+		});
+		expect(siteConfig.url).toBe("https://palettra.design");
 	});
 });
 

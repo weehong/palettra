@@ -43,8 +43,8 @@ export function ImportMenu({
 			<DropdownMenuTrigger
 				data-testid="import-menu"
 				className={cn(
-					buttonVariants({ variant: "outline", size: "sm" }),
-					"h-9 rounded-full px-3.5 font-semibold shadow-xs",
+					buttonVariants({ variant: "outline", size: "toolbar" }),
+					"rounded-full font-semibold shadow-xs",
 				)}
 			>
 				<Upload aria-hidden="true" />

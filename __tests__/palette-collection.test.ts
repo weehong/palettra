@@ -5,7 +5,9 @@ import { defaultTypography } from "@/lib/typography";
 import {
 	deleteAllPalettes,
 	isSafePaletteHref,
+	listPalettes,
 	paletteDocFromState,
+	updatePalette,
 } from "@/lib/palette-collection";
 
 const firestoreState = vi.hoisted(() => ({
@@ -14,6 +16,8 @@ const firestoreState = vi.hoisted(() => ({
 	limit: vi.fn((count: number) => ({ type: "limit", count })),
 	query: vi.fn((...args: Array<unknown>) => ({ type: "query", args })),
 	collectionRef: { type: "collection" },
+	updateDoc: vi.fn(),
+	doc: vi.fn((...segments: Array<unknown>) => ({ segments })),
 }));
 
 vi.mock("firebase/firestore", () => ({
@@ -22,13 +26,13 @@ vi.mock("firebase/firestore", () => ({
 		withConverter: vi.fn(() => firestoreState.collectionRef),
 	})),
 	deleteDoc: vi.fn(),
-	doc: vi.fn(),
+	doc: (...args: Array<unknown>) => firestoreState.doc(...args),
 	getDocs: (...args: Array<unknown>) => firestoreState.getDocs(...args),
 	limit: (count: number) => firestoreState.limit(count),
 	orderBy: vi.fn(),
 	query: (...args: Array<unknown>) => firestoreState.query(...args),
 	serverTimestamp: vi.fn(),
-	updateDoc: vi.fn(),
+	updateDoc: (...args: Array<unknown>) => firestoreState.updateDoc(...args),
 	writeBatch: (...args: Array<unknown>) => firestoreState.writeBatch(...args),
 }));
 
@@ -44,6 +48,8 @@ describe("palette collection data helpers", () => {
 		firestoreState.writeBatch.mockReset();
 		firestoreState.limit.mockClear();
 		firestoreState.query.mockClear();
+		firestoreState.updateDoc.mockReset();
+		firestoreState.doc.mockClear();
 	});
 
 	it("builds a Firestore input from theme state", () => {
@@ -64,6 +70,71 @@ describe("palette collection data helpers", () => {
 		const doc = paletteDocFromState(theme, defaultTypography());
 
 		expect("preset" in doc.roles[0]).toBe(false);
+	});
+
+	it("includes semantic names and their lock state in the saved document", () => {
+		const theme = defaultTheme("#2563eb");
+		theme.roles[0].semanticNames = { 200: "surface-muted" };
+		theme.semanticNamesLocked = true;
+
+		const doc = paletteDocFromState(theme, defaultTypography());
+
+		expect(doc.roles[0].semanticNames).toEqual({ 200: "surface-muted" });
+		expect(doc.semanticNamesLocked).toBe(true);
+		expect(doc.href).toContain("semantic=0~200~surface-muted");
+		expect(doc.href).toContain("semanticLocked=1");
+	});
+
+	it("restores the semantic-name lock state from Firestore", async () => {
+		const theme = defaultTheme("#2563eb");
+		theme.roles[0].semanticNames = { 200: "surface-muted" };
+		firestoreState.getDocs.mockResolvedValueOnce({
+			docs: [
+				{
+					id: "palette-1",
+					data: () => ({
+						name: "Brand palette",
+						roles: theme.roles,
+						semanticNamesLocked: true,
+						typography: defaultTypography(),
+						href: "/generate/2563eb?semantic=0~200~surface-muted&semanticLocked=1",
+					}),
+				},
+			],
+		});
+
+		const [palette] = await listPalettes({ app: "db" } as never, "user-1");
+
+		expect(palette.roles[0].semanticNames).toEqual({ 200: "surface-muted" });
+		expect(palette.semanticNamesLocked).toBe(true);
+	});
+
+	it("updates an existing palette without replacing its creation timestamp", async () => {
+		firestoreState.updateDoc.mockResolvedValueOnce(undefined);
+		const input = paletteDocFromState(
+			defaultTheme("#2563eb"),
+			defaultTypography(),
+		);
+
+		await updatePalette({ app: "db" } as never, "user-1", "palette-1", input);
+
+		expect(firestoreState.doc).toHaveBeenCalledWith(
+			expect.anything(),
+			"users",
+			"user-1",
+			"palettes",
+			"palette-1",
+		);
+		expect(firestoreState.updateDoc).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				name: "Primary #2563eb",
+				updatedAt: undefined,
+			}),
+		);
+		expect(firestoreState.updateDoc.mock.calls[0][1]).not.toHaveProperty(
+			"createdAt",
+		);
 	});
 
 	it("accepts only safe internal generate hrefs", () => {

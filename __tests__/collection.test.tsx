@@ -13,6 +13,7 @@ const authState = vi.hoisted(() => ({
 
 const collectionState = vi.hoisted(() => ({
 	savePalette: vi.fn(),
+	updatePalette: vi.fn(),
 	listPalettes: vi.fn(),
 	deletePalette: vi.fn(),
 	renamePalette: vi.fn(),
@@ -46,6 +47,8 @@ vi.mock("@/lib/palette-collection", async (importOriginal) => {
 		...actual,
 		savePalette: (...args: Array<unknown>) =>
 			collectionState.savePalette(...args),
+		updatePalette: (...args: Array<unknown>) =>
+			collectionState.updatePalette(...args),
 		listPalettes: (...args: Array<unknown>) =>
 			collectionState.listPalettes(...args),
 		deletePalette: (...args: Array<unknown>) =>
@@ -73,6 +76,7 @@ describe("palette collection UI", () => {
 		authState.status = "disabled";
 		authState.user = null;
 		collectionState.savePalette.mockReset();
+		collectionState.updatePalette.mockReset();
 		collectionState.listPalettes.mockReset();
 		collectionState.deletePalette.mockReset();
 		collectionState.renamePalette.mockReset();
@@ -183,6 +187,75 @@ describe("palette collection UI", () => {
 		expect(toastState.success).not.toHaveBeenCalled();
 	});
 
+	it("offers to overwrite an opened saved palette", async () => {
+		authState.status = "signed-in";
+		authState.user = { uid: "user-1" };
+		collectionState.updatePalette.mockResolvedValueOnce(undefined);
+		const { SavePaletteButton } =
+			await import("@/components/collection/save-palette-button");
+
+		renderWithQuery(
+			<SavePaletteButton
+				theme={defaultTheme("#a543bc")}
+				typography={defaultTypography()}
+				existingPalette={{ id: "palette-1", name: "Brand palette" }}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+		expect(
+			await screen.findByRole("heading", { name: "Save existing palette?" }),
+		).toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "Overwrite" }));
+
+		await waitFor(() => {
+			expect(collectionState.updatePalette).toHaveBeenCalledWith(
+				expect.anything(),
+				"user-1",
+				"palette-1",
+				expect.objectContaining({ name: "Brand palette" }),
+			);
+		});
+		expect(collectionState.savePalette).not.toHaveBeenCalled();
+	});
+
+	it("creates a named copy of an opened saved palette", async () => {
+		authState.status = "signed-in";
+		authState.user = { uid: "user-1" };
+		collectionState.savePalette.mockResolvedValueOnce("palette-2");
+		const onSaved = vi.fn();
+		const { SavePaletteButton } =
+			await import("@/components/collection/save-palette-button");
+
+		renderWithQuery(
+			<SavePaletteButton
+				theme={defaultTheme("#a543bc")}
+				typography={defaultTypography()}
+				existingPalette={{ id: "palette-1", name: "Brand palette" }}
+				onSaved={onSaved}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Save" }));
+		fireEvent.click(await screen.findByRole("button", { name: "Create new" }));
+		const nameInput = screen.getByLabelText("Palette name");
+		expect(nameInput).toHaveValue("Brand palette copy");
+		fireEvent.change(nameInput, { target: { value: "Brand variation" } });
+		fireEvent.click(screen.getByRole("button", { name: "Save palette" }));
+
+		await waitFor(() => {
+			expect(collectionState.savePalette).toHaveBeenCalledWith(
+				expect.anything(),
+				"user-1",
+				expect.objectContaining({ name: "Brand variation" }),
+			);
+		});
+		expect(onSaved).toHaveBeenCalledWith({
+			id: "palette-2",
+			name: "Brand variation",
+		});
+		expect(collectionState.updatePalette).not.toHaveBeenCalled();
+	});
+
 	it("lists saved palettes in the collection dialog", async () => {
 		authState.status = "signed-in";
 		authState.user = { uid: "user-1" };
@@ -209,9 +282,41 @@ describe("palette collection UI", () => {
 		// Radix portals dialog content to document.body, outside the render container.
 		const previewColors = screen
 			.getByRole("dialog", { name: "My palettes" })
-			.querySelectorAll('[aria-hidden="true"][style*="background-color"]');
+			.querySelectorAll('[style*="background-color"]');
 		expect(previewColors).toHaveLength(1);
-		expect(previewColors[0]).toHaveClass("h-10", "w-10", "shrink-0");
+		expect(previewColors[0]).toHaveClass("aspect-square", "w-full");
+		expect(previewColors[0]).toHaveAttribute("title", "#A543BC");
+	});
+
+	it("shows every color in a saved palette preview", async () => {
+		authState.status = "signed-in";
+		authState.user = { uid: "user-1" };
+		const roles = Array.from({ length: 20 }, (_, index) => ({
+			id: `role-${index}`,
+			name: `Role ${index}`,
+			hex: `#${index.toString(16).padStart(6, "0")}`,
+		}));
+		collectionState.listPalettes.mockResolvedValueOnce([
+			{
+				id: "palette-1",
+				name: "Large palette",
+				roles,
+				typography: defaultTypography(),
+				href: "/generate/000000",
+				createdAt: "2026-07-05T00:00:00.000Z",
+				updatedAt: "2026-07-05T00:00:00.000Z",
+			},
+		]);
+		const { CollectionDialog } =
+			await import("@/components/collection/collection-dialog");
+
+		renderWithQuery(<CollectionDialog open onOpenChange={() => {}} />);
+
+		await screen.findByText("Large palette");
+		const previewColors = screen
+			.getByRole("dialog", { name: "My palettes" })
+			.querySelectorAll('[style*="background-color"]');
+		expect(previewColors).toHaveLength(20);
 	});
 
 	it("shows a circular spinner while saved palettes load", async () => {

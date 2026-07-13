@@ -8,6 +8,7 @@ import type { Theme } from "@/lib/theme";
 import {
 	applyLockedRoles,
 	applySemanticNames,
+	buildThemeHref,
 	createPrimaryRole,
 	decodeRoles,
 } from "@/lib/theme";
@@ -99,7 +100,11 @@ export default async function GeneratePage({
 			<h1 className="sr-only">{paletteName} Tailwind color system</h1>
 			{/* AI theme + Apply to site temporarily withdrawn: aiEnabled/
 			    aiDefaultModel/applyToSiteEnabled intentionally not passed. */}
-			<PaletteGenerator initialTheme={theme} initialTypography={typography} />
+			<PaletteGenerator
+				key={buildThemeHref(theme, typography)}
+				initialTheme={theme}
+				initialTypography={typography}
+			/>
 		</main>
 	);
 }

@@ -52,6 +52,12 @@ import { useSiteTheme } from "@/components/generator/use-site-theme";
 import { Spinner } from "@/components/ui/spinner";
 import { trackEvent, trackEventOnce } from "@/lib/analytics";
 import { rememberPaletteHref } from "@/lib/recent-palette";
+import {
+	clearPendingSavedPalette,
+	type OpenedSavedPalette,
+	readPendingSavedPalette,
+	subscribeToPaletteOpen,
+} from "@/lib/open-palette";
 
 type PaletteGeneratorProps = {
 	initialTheme: Theme;
@@ -79,34 +85,29 @@ const TAB_FONTS = 3;
 const TAB_VALUES = ["color", "neutral", "status", "font"] as const;
 
 const addButtonClass = cn(
-	buttonVariants({ variant: "outline", size: "sm" }),
-	"h-9 rounded-full px-3.5 font-semibold shadow-xs",
+	buttonVariants({ variant: "outline", size: "toolbar" }),
+	"rounded-full font-semibold shadow-xs",
 );
 
 const stickyTopClass =
-	"sticky top-0 z-10 flex min-h-14 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 py-2.5 backdrop-blur-sm md:px-5";
+	"sticky top-0 z-10 flex min-h-14 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 py-2.5 backdrop-blur-sm md:p-5";
 
 const stickyActionClass = cn(
-	buttonVariants({ variant: "outline", size: "sm" }),
-	"h-9 rounded-full px-3.5 font-semibold shadow-xs",
-);
-
-const stickyExportClass = cn(
-	buttonVariants({ variant: "default", size: "sm" }),
-	"h-9 rounded-full px-4 font-semibold shadow-sm",
+	buttonVariants({ variant: "outline", size: "toolbar" }),
+	"rounded-full font-semibold shadow-xs",
 );
 
 const compactToolbarButtonClass = cn(
-	buttonVariants({ variant: "outline", size: "sm" }),
-	"h-9 rounded-full px-3.5 font-semibold shadow-xs",
+	buttonVariants({ variant: "outline", size: "toolbar" }),
+	"rounded-full font-semibold shadow-xs",
 );
 
 const stickyFooterClass =
 	"sticky bottom-0 z-10 mt-auto flex flex-wrap items-center justify-end gap-2 border-t border-border bg-card p-5 py-3 md:p-6";
 
 const toolbarButtonClass = cn(
-	buttonVariants({ variant: "outline", size: "sm" }),
-	"h-9 rounded-full px-3.5 font-semibold",
+	buttonVariants({ variant: "outline", size: "toolbar" }),
+	"rounded-full font-semibold",
 );
 
 /** Default name for the color at a pill position: Primary, Secondary, …. */
@@ -203,9 +204,43 @@ export function PaletteGenerator({
 	const [aiSiteVars, setAiSiteVars] = useState<AiSiteTheme | null>(null);
 	const [aiPending, setAiPending] = useState<boolean>(false);
 	const [aiError, setAiError] = useState<string>("");
+	const [savedPalette, setSavedPalette] = useState<OpenedSavedPalette | null>(
+		() => (typeof window === "undefined" ? null : readPendingSavedPalette()),
+	);
 	const aiGenerationRef = useRef<number>(0);
 	const aiAbortRef = useRef<AbortController | null>(null);
 	const { copiedKey, copy } = useCopyToClipboard();
+
+	useEffect(
+		() =>
+			subscribeToPaletteOpen(
+				({
+					theme,
+					typography: nextTypography,
+					savedPalette: openedPalette,
+				}) => {
+					setRoles(theme.roles);
+					setSemanticNamesLocked(theme.semanticNamesLocked ?? false);
+					setTypography(nextTypography ?? defaultTypography());
+					setShowTypography(
+						nextTypography != null && !isDefaultTypography(nextTypography),
+					);
+					setTabIndex(TAB_COLORS);
+					setDragIndex(null);
+					setExportOpen(false);
+					setPreviewOpen(false);
+					setImportOpen(false);
+					setStitchImportOpen(false);
+					setStitchSpec(null);
+					setSavedPalette(openedPalette ?? null);
+				},
+			),
+		[],
+	);
+
+	useEffect(() => {
+		clearPendingSavedPalette();
+	}, []);
 
 	const primaryHex = roles[0]?.hex ?? "#000000";
 
@@ -783,7 +818,12 @@ export function PaletteGenerator({
 						/>
 					</div>
 					<div className="ml-auto flex flex-wrap items-center gap-2">
-						<SavePaletteButton theme={effectiveTheme} typography={typography} />
+						<SavePaletteButton
+							theme={effectiveTheme}
+							typography={typography}
+							existingPalette={savedPalette}
+							onSaved={setSavedPalette}
+						/>
 						{aiEnabled ? (
 							<button
 								type="button"
@@ -971,11 +1011,12 @@ export function PaletteGenerator({
 									</button>
 									<Button
 										aria-label="Export"
+										size="toolbar"
 										onClick={() => {
 											setExportOpen(true);
 											trackEvent("export_dialog_opened");
 										}}
-										className={stickyExportClass}
+										className="rounded-full px-4 font-semibold shadow-sm"
 									>
 										<Download aria-hidden="true" />
 										Export

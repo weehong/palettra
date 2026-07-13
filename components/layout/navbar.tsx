@@ -1,7 +1,7 @@
 "use client";
 
 import type { JSX } from "react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 
 import { SignInDialog } from "@/components/auth/sign-in-dialog";
@@ -34,7 +34,9 @@ export function Navbar(): JSX.Element {
 				</span>
 			</Link>
 			<nav aria-label="Account" className="flex items-center gap-2">
-				<ContinuePaletteLink />
+				<Suspense fallback={null}>
+					<ContinuePaletteLink />
+				</Suspense>
 				<UserMenu
 					onSignInClick={() => setSignInOpen(true)}
 					onOpenCollection={openCollection}

@@ -5,11 +5,29 @@
  * structured data, and Open Graph images stay in sync from a single source.
  */
 
-const DEFAULT_SITE_URL = "http://localhost:3000";
+const PRODUCTION_SITE_URL = "https://palettra.design";
+const LOCAL_SITE_URL = "http://localhost:3000";
+
+function isLoopbackUrl(value: string): boolean {
+	try {
+		const hostname = new URL(value).hostname;
+		return (
+			hostname === "localhost" ||
+			hostname === "127.0.0.1" ||
+			hostname === "[::1]"
+		);
+	} catch {
+		return false;
+	}
+}
 
 function resolveSiteUrl(): string {
 	const fromEnv = process.env.NEXT_PUBLIC_SITE_URL;
-	if (fromEnv && fromEnv.length > 0) {
+	if (
+		fromEnv &&
+		fromEnv.length > 0 &&
+		!(process.env.NODE_ENV === "production" && isLoopbackUrl(fromEnv))
+	) {
 		return fromEnv.replace(/\/$/, "");
 	}
 	// Vercel injects the project's production domain (e.g. <project>.vercel.app)
@@ -24,7 +42,9 @@ function resolveSiteUrl(): string {
 	if (vercelUrl && vercelUrl.length > 0) {
 		return `https://${vercelUrl}`;
 	}
-	return DEFAULT_SITE_URL;
+	return process.env.NODE_ENV === "production"
+		? PRODUCTION_SITE_URL
+		: LOCAL_SITE_URL;
 }
 
 export type SiteConfig = {

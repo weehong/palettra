@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+	act,
 	fireEvent,
 	render,
 	screen,
@@ -10,10 +11,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { generatePalette } from "@/lib/color";
+import { generatePalette, type Shade } from "@/lib/color";
 import { defaultTheme } from "@/lib/theme";
 import { defaultTypography } from "@/lib/typography";
 import { PaletteGenerator } from "@/components/generator/palette-generator";
+import { openPaletteOnCurrentPage } from "@/lib/open-palette";
 
 const writeText = vi.fn<(text: string) => Promise<void>>(() =>
 	Promise.resolve(),
@@ -52,6 +54,26 @@ function selectGeneratorTab(name: string): void {
 }
 
 describe("PaletteGenerator", () => {
+	it("opens a large saved palette directly on the current page", () => {
+		window.history.replaceState(null, "", "/");
+		renderGenerator();
+		const roles = Array.from({ length: 20 }, (_, index) => ({
+			id: index === 0 ? "primary" : `custom-${index}`,
+			name: index === 0 ? "Primary" : `Color ${index + 1}`,
+			hex: `#${(index + 1).toString(16).padStart(6, "0")}`,
+			auto: false,
+		}));
+
+		act(() => {
+			expect(openPaletteOnCurrentPage({ theme: { roles } })).toBe(true);
+		});
+
+		expect(screen.getAllByRole("textbox", { name: / hex$/ })).toHaveLength(20);
+		expect(screen.getByRole("textbox", { name: "Color 20 hex" })).toHaveValue(
+			"#000014",
+		);
+	});
+
 	it("keeps locked colors unchanged during randomization", async () => {
 		const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
 		renderGenerator({
@@ -585,6 +607,73 @@ describe("PaletteGenerator", () => {
 		expect(
 			screen.getByRole("textbox", { name: "200 semantic name" }),
 		).toHaveValue("brand-200");
+	});
+
+	it("shows every restored semantic prefix after randomizing colors", () => {
+		const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
+		const semanticNames = (hex: string, prefix: string) =>
+			Object.fromEntries(
+				generatePalette(hex).shades.map(({ shade }) => [
+					shade,
+					`${prefix}-${shade}`,
+				]),
+			) as Partial<Record<Shade, string>>;
+		renderGenerator({
+			initialTheme: {
+				roles: [
+					{
+						id: "primary",
+						name: "Primary",
+						hex: "#006d77",
+						auto: false,
+						semanticNames: semanticNames("#006d77", "upmatches"),
+					},
+					{
+						id: "secondary",
+						name: "Secondary",
+						hex: "#191265",
+						auto: false,
+						semanticNames: semanticNames("#191265", "randomness"),
+					},
+					{
+						id: "tertiary",
+						name: "Tertiary",
+						hex: "#f2ba11",
+						auto: false,
+						semanticNames: semanticNames("#f2ba11", "attention"),
+					},
+				],
+			},
+		});
+
+		const expectedPrefixes = [
+			["Primary", "upmatches"],
+			["Secondary", "randomness"],
+			["Tertiary", "attention"],
+		] as const;
+		for (const [role, prefix] of expectedPrefixes) {
+			expect(
+				screen.getByRole("textbox", {
+					name: `${role} row semantic name`,
+				}),
+			).toHaveValue(prefix);
+			expect(
+				screen.getByRole("checkbox", {
+					name: `${role} apply shade numbers`,
+				}),
+			).toBeChecked();
+		}
+
+		fireEvent.click(screen.getByRole("button", { name: "Random" }));
+
+		for (const [role, prefix] of expectedPrefixes) {
+			expect(
+				screen.getByRole("textbox", {
+					name: `${role} row semantic name`,
+				}),
+			).toHaveValue(prefix);
+		}
+		random.mockRestore();
 	});
 
 	it("shows the primary base hex", () => {

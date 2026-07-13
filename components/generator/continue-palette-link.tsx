@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { JSX } from "react";
 import { useSyncExternalStore } from "react";
 
-import { readRecentPaletteHref } from "@/lib/recent-palette";
+import {
+	readRestorablePaletteHref,
+	subscribeToRecentPalette,
+} from "@/lib/recent-palette";
 
 export function ContinuePaletteLink(): JSX.Element | null {
+	usePathname();
+	useSearchParams();
 	const href = useSyncExternalStore(
-		() => () => {},
-		readRecentPaletteHref,
+		subscribeToRecentPalette,
+		readRestorablePaletteHref,
 		() => null,
 	);
 

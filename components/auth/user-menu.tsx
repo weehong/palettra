@@ -32,7 +32,8 @@ function initials(
 		.join("");
 }
 
-const menuItemClass = "w-full px-3 py-2 text-base text-foreground";
+const menuItemClass =
+	"w-full cursor-pointer px-3 py-2 text-base text-foreground";
 
 export function UserMenu({
 	onSignInClick,
@@ -48,7 +49,11 @@ export function UserMenu({
 
 	if (status !== "signed-in" || !user) {
 		return (
-			<Button variant="outline" onClick={onSignInClick} className="font-semibold">
+			<Button
+				variant="outline"
+				onClick={onSignInClick}
+				className="font-semibold"
+			>
 				Sign in
 			</Button>
 		);
@@ -67,7 +72,7 @@ export function UserMenu({
 		<DropdownMenu>
 			<DropdownMenuTrigger
 				aria-label="Account"
-				className="inline-flex h-10 w-10 items-center justify-center rounded-full transition-shadow hover:ring-2 hover:ring-border focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+				className="hover:ring-border focus-visible:ring-ring inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full transition-shadow hover:ring-2 focus-visible:ring-2 focus-visible:outline-none"
 			>
 				{user.photoURL ? (
 					// eslint-disable-next-line @next/next/no-img-element -- Firebase avatars are remote user URLs; the plan explicitly avoids next/image config for them.
@@ -78,7 +83,7 @@ export function UserMenu({
 						className="h-9 w-9 rounded-full object-cover"
 					/>
 				) : (
-					<span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+					<span className="bg-primary text-primary-foreground inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold">
 						{initials(user.displayName, user.email)}
 					</span>
 				)}
@@ -112,9 +117,9 @@ export function UserMenu({
 					)}
 				</DropdownMenuItem>
 				{user.email ? (
-					<div className="mt-1.5 border-t border-border px-3 pt-2 pb-1">
+					<div className="border-border mt-1.5 border-t px-3 pt-2 pb-1">
 						<p
-							className="truncate text-sm text-muted-foreground"
+							className="text-muted-foreground truncate text-sm"
 							title={user.email}
 						>
 							{user.email}

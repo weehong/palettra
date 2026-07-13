@@ -33,7 +33,9 @@ vi.mock("@/lib/analytics", () => ({
 	trackEvent,
 }));
 vi.mock("next/navigation", () => ({
+	usePathname: () => "/",
 	useRouter: () => ({ push: routerPush }),
+	useSearchParams: () => new URLSearchParams(),
 }));
 
 function renderWithQuery(children: ReactNode) {

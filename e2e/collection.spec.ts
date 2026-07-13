@@ -34,13 +34,13 @@ test("saves the current palette to the collection", async ({
 	await signIn(page);
 
 	await page.getByRole("button", { name: "Save" }).click();
-	await expect(page.getByRole("button", { name: "Saved ✓" })).toBeVisible();
-	// The button label reverts after ~1.5s.
+	await page.getByLabel("Palette name").fill("Test palette");
+	await page.getByRole("button", { name: "Save palette" }).click();
 	await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
 
 	expect(firestore.palettes).toHaveLength(1);
 	const saved = firestore.palettes[0];
-	expect(saved.name).toContain("#a543bc");
+	expect(saved.name).toBe("Test palette");
 	expect(String(saved.href)).toMatch(/^\/generate\/[0-9a-fA-F]{3,8}/);
 	expect(saved.roles).toHaveLength(1);
 	expect(saved.updatedAt).toBeTruthy();
@@ -102,6 +102,35 @@ test("opens a saved palette by its href", async ({ context, page }) => {
 	await expect.poll(() => page.url()).toContain("/generate/3366ff");
 	await expect(page.getByRole("dialog")).toBeHidden();
 	await expect(page.getByTestId("swatch")).toHaveCount(11);
+});
+
+test("overwrites an opened saved palette", async ({ context, page }) => {
+	const firestore = new FirestoreFake();
+	firestore.seedPalette({
+		id: "p1",
+		name: "Ocean palette",
+		roles: [role("primary", "Primary", "#3366ff")],
+		href: "/generate/3366ff",
+	});
+	await firestore.install(context);
+	await signIn(page);
+
+	await openCollection(page);
+	await page.getByRole("button", { name: "Open Ocean palette" }).click();
+	await page.getByLabel("Primary hex").fill("#112233");
+	await page.getByRole("button", { name: "Save" }).click();
+	await expect(
+		page.getByRole("heading", { name: "Save existing palette?" }),
+	).toBeVisible();
+	await page.getByRole("button", { name: "Overwrite" }).click();
+
+	await expect.poll(() => firestore.palettes).toHaveLength(1);
+	await expect
+		.poll(() =>
+			(firestore.palettes[0].roles as Array<{ hex: string }>)[0]?.hex,
+		)
+		.toBe("#112233");
+	expect(firestore.palettes[0].name).toBe("Ocean palette");
 });
 
 // C5 — a tampered href must not escape /generate/.

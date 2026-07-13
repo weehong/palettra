@@ -6,7 +6,7 @@ service cloud.firestore {
         return request.auth != null && request.auth.uid == uid;
       }
       function isValidPalette() {
-        return request.resource.data.keys().hasOnly(['name', 'roles', 'typography', 'href', 'createdAt', 'updatedAt'])
+        return request.resource.data.keys().hasOnly(['name', 'roles', 'typography', 'href', 'semanticNamesLocked', 'createdAt', 'updatedAt'])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100
           && request.resource.data.roles is list && request.resource.data.roles.size() > 0
@@ -14,6 +14,8 @@ service cloud.firestore {
           && request.resource.data.href is string
           && request.resource.data.href.size() <= 2048
           && request.resource.data.href.matches('/generate/[0-9a-fA-F]{3,8}(\\?[A-Za-z0-9=&~._%-]*)?')
+          && (!request.resource.data.keys().hasAny(['semanticNamesLocked'])
+            || request.resource.data.semanticNamesLocked is bool)
           && (request.resource.data.typography == null || request.resource.data.typography is map)
           && request.resource.data.updatedAt == request.time;
       }
