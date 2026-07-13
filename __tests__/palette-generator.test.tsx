@@ -122,7 +122,13 @@ describe("PaletteGenerator", () => {
 			"h-10",
 			"rounded-md",
 		);
-		expect(screen.getByRole("button", { name: "Export" })).toHaveClass("h-10");
+		expect(screen.getByRole("button", { name: "Export" })).toHaveClass("h-9");
+		for (const name of ["Random", "Reset", "Import"]) {
+			expect(screen.getByRole("button", { name })).toHaveClass(
+				"h-9",
+				"rounded-full",
+			);
+		}
 	});
 
 	it("uses neutral outline styling for toolbar actions and primary for the CTA", () => {
@@ -431,7 +437,7 @@ describe("PaletteGenerator", () => {
 		});
 	});
 
-	it("only shows Add Color in the sticky color footer", () => {
+	it("only shows Add Color in the sticky top bar", () => {
 		renderGenerator();
 
 		expect(screen.getByTestId("add-custom")).toHaveTextContent("Add Color");
@@ -439,24 +445,26 @@ describe("PaletteGenerator", () => {
 		expect(screen.queryByTestId("add-tertiary")).not.toBeInTheDocument();
 	});
 
-	it("anchors the Add Color footer to the bottom of the color scroll pane", () => {
+	it("anchors the actions to the top of the workspace scroll pane", () => {
 		renderGenerator();
 
-		expect(screen.getByTestId("generator-section-panel-color")).toHaveClass(
-			"min-h-full",
-		);
-		expect(screen.getByTestId("color-sticky-footer")).toHaveClass(
+		expect(screen.getByTestId("workspace-sticky-top")).toHaveClass(
 			"sticky",
-			"bottom-0",
-			"mt-auto",
+			"top-0",
+		);
+		expect(screen.getByTestId("workspace-sticky-top")).toContainElement(
+			screen.getByRole("button", { name: "Preview" }),
+		);
+		expect(screen.getByTestId("workspace-sticky-top")).toContainElement(
+			screen.getByRole("button", { name: "Export" }),
 		);
 	});
 
-	it("places Add Color at the right edge of the color footer", () => {
+	it("separates the add action from the preview and export actions", () => {
 		renderGenerator();
 
-		expect(screen.getByTestId("color-sticky-footer")).toHaveClass(
-			"justify-end",
+		expect(screen.getByTestId("workspace-sticky-top")).toHaveClass(
+			"justify-between",
 		);
 	});
 
@@ -497,9 +505,7 @@ describe("PaletteGenerator", () => {
 
 	it("allows the workspace content lane to grow while its content pane scrolls", () => {
 		renderGenerator();
-		expect(screen.getByTestId("workspace-content")).not.toHaveClass(
-			"min-h-0",
-		);
+		expect(screen.getByTestId("workspace-content")).not.toHaveClass("min-h-0");
 		expect(screen.getByTestId("workspace-content")).toHaveClass(
 			"flex-none",
 			"overflow-visible",
@@ -544,9 +550,12 @@ describe("PaletteGenerator", () => {
 		renderGenerator();
 		fireEvent.click(screen.getByTestId("add-custom"));
 
-		fireEvent.change(screen.getByRole("textbox", { name: "Primary row semantic name" }), {
-			target: { value: "surface-muted" },
-		});
+		fireEvent.change(
+			screen.getByRole("textbox", { name: "Primary row semantic name" }),
+			{
+				target: { value: "surface-muted" },
+			},
+		);
 
 		const names = screen.getAllByPlaceholderText("Semantic name");
 		for (const name of names.slice(0, 11)) {
@@ -570,12 +579,12 @@ describe("PaletteGenerator", () => {
 			{ target: { value: "brand" } },
 		);
 
-		expect(screen.getByRole("textbox", { name: "50 semantic name" })).toHaveValue(
-			"brand-50",
-		);
-		expect(screen.getByRole("textbox", { name: "200 semantic name" })).toHaveValue(
-			"brand-200",
-		);
+		expect(
+			screen.getByRole("textbox", { name: "50 semantic name" }),
+		).toHaveValue("brand-50");
+		expect(
+			screen.getByRole("textbox", { name: "200 semantic name" }),
+		).toHaveValue("brand-200");
 	});
 
 	it("shows the primary base hex", () => {
@@ -734,24 +743,17 @@ describe("PaletteGenerator", () => {
 		expect(screen.getAllByTestId("swatch")).toHaveLength(22);
 	});
 
-	it("uses sticky right-aligned footers for Neutral and Status actions", () => {
+	it("shows Neutral and Status actions in the sticky top bar", () => {
 		renderGenerator();
+		const stickyTop = screen.getByTestId("workspace-sticky-top");
 
 		selectGeneratorTab("Neutral");
-		expect(screen.getByTestId("neutral-sticky-footer")).toHaveClass(
-			"sticky",
-			"bottom-0",
-			"mt-auto",
-			"justify-end",
-		);
+		expect(stickyTop).toContainElement(screen.getByTestId("add-neutral"));
+		expect(stickyTop).not.toContainElement(screen.queryByTestId("add-status"));
 
 		selectGeneratorTab("Status");
-		expect(screen.getByTestId("status-sticky-footer")).toHaveClass(
-			"sticky",
-			"bottom-0",
-			"mt-auto",
-			"justify-end",
-		);
+		expect(stickyTop).toContainElement(screen.getByTestId("add-status"));
+		expect(stickyTop).not.toContainElement(screen.queryByTestId("add-neutral"));
 	});
 
 	it("puts the Add Fonts action in a sticky footer, not the empty-state card", () => {

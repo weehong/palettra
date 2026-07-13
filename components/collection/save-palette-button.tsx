@@ -86,7 +86,12 @@ function SignedInSaveButton({
 
 	return (
 		<>
-			<Button variant="outline" onClick={openDialog} className="font-semibold">
+			<Button
+				variant="outline"
+				size="sm"
+				onClick={openDialog}
+				className="h-9 rounded-full px-3.5 font-semibold"
+			>
 				Save
 			</Button>
 

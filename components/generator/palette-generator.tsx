@@ -4,7 +4,15 @@ import type { CSSProperties, JSX } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
-import { Circle, CircleDot } from "lucide-react";
+import {
+	Circle,
+	CircleDot,
+	Download,
+	Eye,
+	Plus,
+	RotateCcw,
+	Shuffle,
+} from "lucide-react";
 
 import type { Palette, Shade } from "@/lib/color";
 import { generatePalette, themeToCssVars, withUniqueSlugs } from "@/lib/color";
@@ -70,15 +78,36 @@ const TAB_FONTS = 3;
 /** Radix Tabs are string-valued; index-aligned with the TAB_* constants. */
 const TAB_VALUES = ["color", "neutral", "status", "font"] as const;
 
-const addButtonClass = cn(buttonVariants({ variant: "outline" }), "px-3");
+const addButtonClass = cn(
+	buttonVariants({ variant: "outline", size: "sm" }),
+	"h-9 rounded-full px-3.5 font-semibold shadow-xs",
+);
+
+const stickyTopClass =
+	"sticky top-0 z-10 flex min-h-14 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 py-2.5 backdrop-blur-sm md:px-5";
+
+const stickyActionClass = cn(
+	buttonVariants({ variant: "outline", size: "sm" }),
+	"h-9 rounded-full px-3.5 font-semibold shadow-xs",
+);
+
+const stickyExportClass = cn(
+	buttonVariants({ variant: "default", size: "sm" }),
+	"h-9 rounded-full px-4 font-semibold shadow-sm",
+);
+
+const compactToolbarButtonClass = cn(
+	buttonVariants({ variant: "outline", size: "sm" }),
+	"h-9 rounded-full px-3.5 font-semibold shadow-xs",
+);
 
 const stickyFooterClass =
-	"sticky bottom-0 z-10 mt-auto flex flex-wrap items-center justify-end gap-2 border-t border-border bg-card py-3 p-5 md:p-6";
+	"sticky bottom-0 z-10 mt-auto flex flex-wrap items-center justify-end gap-2 border-t border-border bg-card p-5 py-3 md:p-6";
 
-const toolbarButtonClass = {
-	outline: cn(buttonVariants({ variant: "outline" }), "font-semibold"),
-	primaryWide: cn(buttonVariants({ variant: "default" }), "px-6 font-semibold"),
-};
+const toolbarButtonClass = cn(
+	buttonVariants({ variant: "outline", size: "sm" }),
+	"h-9 rounded-full px-3.5 font-semibold",
+);
 
 /** Default name for the color at a pill position: Primary, Secondary, …. */
 function positionalName(position: number): string {
@@ -729,15 +758,17 @@ export function PaletteGenerator({
 						<button
 							type="button"
 							onClick={handleRandom}
-							className={toolbarButtonClass.outline}
+							className={compactToolbarButtonClass}
 						>
+							<Shuffle aria-hidden="true" />
 							Random
 						</button>
 						<button
 							type="button"
 							onClick={handleReset}
-							className={toolbarButtonClass.outline}
+							className={compactToolbarButtonClass}
 						>
+							<RotateCcw aria-hidden="true" />
 							Reset
 						</button>
 						<ImportMenu
@@ -760,7 +791,7 @@ export function PaletteGenerator({
 								aria-busy={aiPending}
 								disabled={aiPending}
 								onClick={() => void handleAiApply()}
-								className={toolbarButtonClass.outline}
+								className={toolbarButtonClass}
 							>
 								{aiPending ? (
 									<Spinner label="Applying AI theme" />
@@ -780,7 +811,7 @@ export function PaletteGenerator({
 								data-testid="apply-to-site-toggle"
 								pressed={applyToSite}
 								onPressedChange={setApplyToSite}
-								className="bg-card hover:text-foreground data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:hover:bg-primary-hover data-[state=on]:hover:text-primary-foreground h-10 px-4 text-base font-semibold"
+								className="bg-card hover:text-foreground data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:hover:bg-primary-hover data-[state=on]:hover:text-primary-foreground h-9 rounded-full px-4 text-sm font-semibold"
 							>
 								<span
 									data-testid="apply-to-site-toggle-icon"
@@ -797,26 +828,6 @@ export function PaletteGenerator({
 								Apply to site
 							</Toggle>
 						) : null}
-						<button
-							type="button"
-							onClick={() => {
-								setPreviewOpen(true);
-								trackEvent("preview_opened", { preview: "default" });
-							}}
-							className={toolbarButtonClass.outline}
-						>
-							Preview
-						</button>
-						<Button
-							aria-label="Export"
-							onClick={() => {
-								setExportOpen(true);
-								trackEvent("export_dialog_opened");
-							}}
-							className={toolbarButtonClass.primaryWide}
-						>
-							Export
-						</Button>
 					</div>
 					{aiError ? (
 						<div
@@ -909,6 +920,68 @@ export function PaletteGenerator({
 							data-testid="workspace-scroll-area"
 							className="workspace-scroll-area flex-none overflow-y-visible md:min-h-0 md:flex-1 md:overflow-y-auto"
 						>
+							<div
+								data-testid="workspace-sticky-top"
+								className={stickyTopClass}
+							>
+								{tabIndex === TAB_COLORS ? (
+									<button
+										type="button"
+										data-testid="add-custom"
+										onClick={handleAddCustom}
+										className={addButtonClass}
+									>
+										<Plus aria-hidden="true" />
+										Add Color
+									</button>
+								) : null}
+								{tabIndex === TAB_NEUTRAL ? (
+									<button
+										type="button"
+										data-testid="add-neutral"
+										onClick={() => handleAddPreset("neutral")}
+										className={addButtonClass}
+									>
+										<Plus aria-hidden="true" />
+										Add Neutral
+									</button>
+								) : null}
+								{tabIndex === TAB_STATUS ? (
+									<button
+										type="button"
+										data-testid="add-status"
+										onClick={handleAddStatus}
+										className={addButtonClass}
+									>
+										<Plus aria-hidden="true" />
+										Add Status
+									</button>
+								) : null}
+								<div className="ml-auto flex items-center gap-1.5">
+									<button
+										type="button"
+										onClick={() => {
+											setPreviewOpen(true);
+											trackEvent("preview_opened", { preview: "default" });
+										}}
+										className={stickyActionClass}
+									>
+										<Eye aria-hidden="true" />
+										Preview
+									</button>
+									<Button
+										aria-label="Export"
+										onClick={() => {
+											setExportOpen(true);
+											trackEvent("export_dialog_opened");
+										}}
+										className={stickyExportClass}
+									>
+										<Download aria-hidden="true" />
+										Export
+									</Button>
+								</div>
+							</div>
 							<TabsContent
 								value="color"
 								id="generator-section-panel-color"
@@ -954,20 +1027,6 @@ export function PaletteGenerator({
 
 									{colorEntries.map(renderDraggableColorPanel)}
 								</div>
-
-								<div
-									data-testid="color-sticky-footer"
-									className={stickyFooterClass}
-								>
-									<button
-										type="button"
-										data-testid="add-custom"
-										onClick={handleAddCustom}
-										className={addButtonClass}
-									>
-										Add Color
-									</button>
-								</div>
 							</TabsContent>
 
 							<TabsContent
@@ -985,20 +1044,6 @@ export function PaletteGenerator({
 										/>
 									) : null}
 								</div>
-
-								<div
-									data-testid="neutral-sticky-footer"
-									className={stickyFooterClass}
-								>
-									<button
-										type="button"
-										data-testid="add-neutral"
-										onClick={() => handleAddPreset("neutral")}
-										className={addButtonClass}
-									>
-										Add Neutral
-									</button>
-								</div>
 							</TabsContent>
 
 							<TabsContent
@@ -1015,20 +1060,6 @@ export function PaletteGenerator({
 											description="Add success, warning, and error color scales and preview them right inside the Components tab."
 										/>
 									) : null}
-								</div>
-
-								<div
-									data-testid="status-sticky-footer"
-									className={stickyFooterClass}
-								>
-									<button
-										type="button"
-										data-testid="add-status"
-										onClick={handleAddStatus}
-										className={addButtonClass}
-									>
-										Add Status
-									</button>
 								</div>
 							</TabsContent>
 
