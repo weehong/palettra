@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import type { JSX, ReactNode } from "react";
 import { Google_Sans, Google_Sans_Code } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { siteConfig, isIndexable } from "@/lib/site-config";
 import {
@@ -109,6 +111,8 @@ export default function RootLayout({
 						<Footer />
 					</div>
 				</Providers>
+				<Analytics />
+				<SpeedInsights />
 			</body>
 			{process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
 				<GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
