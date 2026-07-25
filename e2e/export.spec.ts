@@ -22,7 +22,6 @@ test("downloads the Figma tokens file", async ({ page }) => {
 	await page.goto("/generate/a543bc");
 	await page.getByRole("button", { name: "Export" }).click();
 	await page.getByRole("tab", { name: /figma \(tokens\)/i }).click();
-	await page.getByRole("button", { name: "Lock names" }).click();
 
 	const downloadPromise = page.waitForEvent("download");
 	await page.getByRole("button", { name: /download/i }).click();
@@ -30,7 +29,7 @@ test("downloads the Figma tokens file", async ({ page }) => {
 	expect(download.suggestedFilename()).toBe("figma-tokens.json");
 });
 
-test("locks and preserves semantic Figma aliases", async ({ page }) => {
+test("uses and preserves semantic Figma aliases", async ({ page }) => {
 	await page.goto("/generate/808080");
 	await page.getByRole("textbox", { name: "Primary name" }).fill("Gray");
 	await page
@@ -39,17 +38,35 @@ test("locks and preserves semantic Figma aliases", async ({ page }) => {
 	await page.getByRole("button", { name: "Export" }).click();
 	await page.getByRole("tab", { name: /figma \(tokens\)/i }).click();
 
+	const dialog = page.getByRole("dialog", { name: "Export theme" });
 	const copy = page.getByRole("button", { name: "Copy", exact: true });
-	await expect(copy).toBeDisabled();
-	await expect(
-		page.getByRole("textbox", { name: "Gray 200 semantic name" }),
-	).toHaveValue("surface-muted");
-	await expect(page.getByText(/gray\/200/)).toBeVisible();
-	await page.getByRole("button", { name: "Lock names" }).click();
 	await expect(copy).toBeEnabled();
+	await expect(
+		dialog.getByRole("heading", { name: "Semantic names" }),
+	).toHaveCount(0);
+	await expect(dialog.getByRole("textbox")).toHaveCount(0);
 	await expect(page.getByText(/"surface-muted"/)).toBeVisible();
 	await expect(page.getByText(/\{gray\.200\}/)).toBeVisible();
-	await expect(page).toHaveURL(/semantic=0~200~surface-muted&semanticLocked=1/);
+	await expect(page).toHaveURL(/semantic=0~200~surface-muted/);
+	await expect(page).not.toHaveURL(/semanticLocked/);
+});
+
+test("shows semantic-name validation without the duplicate editor", async ({
+	page,
+}) => {
+	await page.goto("/generate/808080");
+	await page
+		.getByRole("textbox", { name: "200 semantic name" })
+		.fill("surface.muted");
+	await page.getByRole("button", { name: "Export" }).click();
+	await page.getByRole("tab", { name: /figma \(tokens\)/i }).click();
+
+	await expect(page.getByRole("alert")).toContainText(
+		"Fix semantic names on the palette before exporting",
+	);
+	await expect(
+		page.getByRole("button", { name: "Copy", exact: true }),
+	).toBeDisabled();
 });
 
 test("Copy toggles to a confirmation label", async ({ page, context }) => {

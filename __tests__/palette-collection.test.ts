@@ -72,20 +72,18 @@ describe("palette collection data helpers", () => {
 		expect("preset" in doc.roles[0]).toBe(false);
 	});
 
-	it("includes semantic names and their lock state in the saved document", () => {
+	it("includes semantic names in the saved document", () => {
 		const theme = defaultTheme("#2563eb");
 		theme.roles[0].semanticNames = { 200: "surface-muted" };
-		theme.semanticNamesLocked = true;
 
 		const doc = paletteDocFromState(theme, defaultTypography());
 
 		expect(doc.roles[0].semanticNames).toEqual({ 200: "surface-muted" });
-		expect(doc.semanticNamesLocked).toBe(true);
 		expect(doc.href).toContain("semantic=0~200~surface-muted");
-		expect(doc.href).toContain("semanticLocked=1");
+		expect(doc.href).not.toContain("semanticLocked");
 	});
 
-	it("restores the semantic-name lock state from Firestore", async () => {
+	it("restores semantic names from Firestore", async () => {
 		const theme = defaultTheme("#2563eb");
 		theme.roles[0].semanticNames = { 200: "surface-muted" };
 		firestoreState.getDocs.mockResolvedValueOnce({
@@ -95,9 +93,8 @@ describe("palette collection data helpers", () => {
 					data: () => ({
 						name: "Brand palette",
 						roles: theme.roles,
-						semanticNamesLocked: true,
 						typography: defaultTypography(),
-						href: "/generate/2563eb?semantic=0~200~surface-muted&semanticLocked=1",
+						href: "/generate/2563eb?semantic=0~200~surface-muted",
 					}),
 				},
 			],
@@ -106,7 +103,6 @@ describe("palette collection data helpers", () => {
 		const [palette] = await listPalettes({ app: "db" } as never, "user-1");
 
 		expect(palette.roles[0].semanticNames).toEqual({ 200: "surface-muted" });
-		expect(palette.semanticNamesLocked).toBe(true);
 	});
 
 	it("updates an existing palette without replacing its creation timestamp", async () => {
@@ -146,9 +142,7 @@ describe("palette collection data helpers", () => {
 			true,
 		);
 		expect(
-			isSafePaletteHref(
-				"/generate/abc?semantic=0~200~surface-muted&semanticLocked=1",
-			),
+			isSafePaletteHref("/generate/abc?semantic=0~200~surface-muted"),
 		).toBe(true);
 	});
 

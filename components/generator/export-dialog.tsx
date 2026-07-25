@@ -3,7 +3,7 @@
 import type { JSX } from "react";
 import { useMemo, useState } from "react";
 
-import type { Palette, Shade } from "@/lib/color";
+import type { Palette } from "@/lib/color";
 import {
 	toCssVars,
 	toFigmaTokens,
@@ -38,9 +38,6 @@ type ExportDialogProps = {
 	stitchSpec?: StitchSpec | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	semanticNamesLocked: boolean;
-	onSemanticNameChange: (id: string, shade: Shade, name: string) => void;
-	onLockSemanticNames: () => void;
 	shareHref: string;
 };
 
@@ -113,9 +110,6 @@ export function ExportDialog({
 	stitchSpec,
 	open,
 	onOpenChange,
-	semanticNamesLocked,
-	onSemanticNameChange,
-	onLockSemanticNames,
 	shareHref,
 }: ExportDialogProps): JSX.Element {
 	const [tab, setTab] = useState<TabKey>("v4");
@@ -129,16 +123,11 @@ export function ExportDialog({
 	);
 	const sluggedPalettes = withUniqueSlugs(palettes);
 	const primitiveNames = new Set(sluggedPalettes.map(({ slug }) => slug));
-	const semanticEntries = roles.flatMap((role, roleIndex) =>
-		Object.entries(role.semanticNames ?? {}).map(([shade, name]) => ({
-			role,
-			roleIndex,
-			shade: Number(shade) as Shade,
-			name,
-		})),
+	const semanticNames = roles.flatMap((role) =>
+		Object.values(role.semanticNames ?? {}),
 	);
-	const normalizedNames = semanticEntries.map(({ name }) => name.trim());
-	const validationError = semanticEntries.find(({ name }) => {
+	const normalizedNames = semanticNames.map((name) => name.trim());
+	const validationError = semanticNames.find((name) => {
 		const trimmed = name.trim();
 		return !trimmed || trimmed.startsWith("$") || /[.{}]/.test(trimmed);
 	})
@@ -154,8 +143,7 @@ export function ExportDialog({
 				  )
 				? "A semantic name conflicts with an exported token group."
 				: null;
-	const figmaExportDisabled =
-		tab === "figma" && (!semanticNamesLocked || Boolean(validationError));
+	const figmaExportDisabled = tab === "figma" && Boolean(validationError);
 
 	function trackActivation(method: "copy" | "download"): void {
 		trackEventOnce("palette-activated", "palette_activated", {
@@ -194,58 +182,14 @@ export function ExportDialog({
 					</TabsList>
 				</Tabs>
 
-				{tab === "figma" ? (
-					<section
-						aria-label="Semantic token names"
-						className="border-input max-h-52 space-y-3 overflow-auto rounded-lg border p-3"
+				{tab === "figma" && validationError ? (
+					<p
+						role="alert"
+						className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
 					>
-						<div className="flex items-center justify-between gap-3">
-							<div>
-								<h3 className="font-semibold">Semantic names</h3>
-								<p className="text-muted-foreground text-sm">
-									Review aliases before copying or downloading.
-								</p>
-							</div>
-							<Button
-								type="button"
-								variant="outline"
-								disabled={Boolean(validationError)}
-								onClick={onLockSemanticNames}
-							>
-								{semanticNamesLocked ? "Names locked" : "Lock names"}
-							</Button>
-						</div>
-						{semanticEntries.length ? (
-							semanticEntries.map(({ role, roleIndex, shade, name }) => (
-								<label
-									key={`${role.id}-${shade}`}
-									className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm"
-								>
-									<input
-										value={name}
-										onChange={(event) =>
-											onSemanticNameChange(role.id, shade, event.target.value)
-										}
-										aria-label={`${role.name} ${shade} semantic name`}
-										className="border-input bg-background rounded-md border px-2 py-1.5"
-									/>
-									<span className="text-muted-foreground font-mono">
-										→ {sluggedPalettes[roleIndex]?.slug}/{shade}
-									</span>
-								</label>
-							))
-						) : (
-							<p className="text-muted-foreground text-sm">
-								Add semantic names beneath palette swatches, then lock this
-								review.
-							</p>
-						)}
-						{validationError ? (
-							<p role="alert" className="text-destructive text-sm">
-								{validationError}
-							</p>
-						) : null}
-					</section>
+						Fix semantic names on the palette before exporting:{" "}
+						{validationError}
+					</p>
 				) : null}
 
 				<pre className="bg-foreground text-background max-h-none min-h-0 max-w-full flex-1 overflow-auto rounded-lg p-4 font-mono text-sm leading-relaxed">

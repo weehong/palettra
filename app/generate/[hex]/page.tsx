@@ -21,7 +21,6 @@ type GeneratePageProps = {
 		colors?: string;
 		type?: string;
 		semantic?: string;
-		semanticLocked?: string;
 		primaryName?: string;
 		locked?: string;
 	}>;
@@ -75,20 +74,14 @@ export default async function GeneratePage({
 		notFound();
 	}
 
-	const { colors, type, semantic, semanticLocked, primaryName, locked } =
-		await searchParams;
+	const { colors, type, semantic, primaryName, locked } = await searchParams;
 	const primaryRole = createPrimaryRole(normalized);
 	if (primaryName?.trim()) primaryRole.name = primaryName.trim();
 	const roles = applyLockedRoles(
 		applySemanticNames([primaryRole, ...decodeRoles(colors)], semantic),
 		locked,
 	);
-	const theme: Theme = {
-		roles,
-		semanticNamesLocked:
-			semanticLocked === "1" &&
-			roles.some((role) => Object.keys(role.semanticNames ?? {}).length > 0),
-	};
+	const theme: Theme = { roles };
 	const typography = decodeTypography(type);
 	const paletteName = generatePalette(normalized).name;
 

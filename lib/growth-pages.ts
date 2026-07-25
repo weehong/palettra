@@ -182,7 +182,7 @@ below 3 → Fail`,
 			{
 				question: "Can semantic token names be reviewed before export?",
 				answer:
-					"Yes. Semantic names must be valid and unique, then explicitly locked before the Figma export is enabled.",
+					"Yes. Semantic names can be edited beneath palette swatches, and export is enabled whenever they are valid and unique.",
 			},
 		],
 		ctaLabel: "Create design tokens",

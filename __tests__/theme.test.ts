@@ -171,15 +171,15 @@ describe("locked role URLs", () => {
 });
 
 describe("semantic name URLs", () => {
-	it("round-trips semantic names and lock state through a theme href", () => {
+	it("round-trips semantic names through a theme href", () => {
 		const role = createPrimaryRole(PRIMARY);
 		role.semanticNames = { 200: "surface muted", 900: "text-strong" };
-		const theme: Theme = { roles: [role], semanticNamesLocked: true };
+		const theme: Theme = { roles: [role] };
 
 		expect(encodeSemanticNames(theme)).toBe(
 			"0~200~surface%2520muted,0~900~text-strong",
 		);
-		expect(buildThemeHref(theme)).toContain("semanticLocked=1");
+		expect(buildThemeHref(theme)).not.toContain("semanticLocked");
 		const restored = applySemanticNames(
 			[createPrimaryRole(PRIMARY)],
 			encodeSemanticNames(theme),

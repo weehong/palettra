@@ -36,7 +36,6 @@ export type ColorRole = {
 
 export type Theme = {
 	roles: Array<ColorRole>;
-	semanticNamesLocked?: boolean;
 };
 
 export type HarmonySpec = {
@@ -284,7 +283,6 @@ export function buildThemeHref(
 	const semanticNames = encodeSemanticNames(theme);
 	if (semanticNames) {
 		parts.push(`semantic=${semanticNames}`);
-		if (theme.semanticNamesLocked) parts.push("semanticLocked=1");
 	}
 	const lockedRoles = encodeLockedRoles(theme);
 	if (lockedRoles) {

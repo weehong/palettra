@@ -30,7 +30,6 @@ export type PaletteDocInput = {
 	roles: Array<ColorRole>;
 	typography: Typography | null;
 	href: string;
-	semanticNamesLocked?: boolean;
 };
 
 export type SavedPalette = PaletteDocInput & {
@@ -78,9 +77,6 @@ export function paletteDocFromState(
 	return {
 		name: `${primary?.name ?? "Palette"} ${hex}`,
 		roles: cleanedTheme.roles,
-		...(cleanedTheme.semanticNamesLocked !== undefined
-			? { semanticNamesLocked: cleanedTheme.semanticNamesLocked }
-			: {}),
 		typography: stripUndefined(typography),
 		href: buildThemeHref(cleanedTheme, typography),
 	};
@@ -152,9 +148,6 @@ export async function listPalettes(
 			id: paletteDoc.id,
 			name: data.name,
 			roles: data.roles,
-			...(data.semanticNamesLocked !== undefined
-				? { semanticNamesLocked: data.semanticNamesLocked }
-				: {}),
 			typography: data.typography,
 			href: data.href,
 			createdAt: timestampToIso(data.createdAt),

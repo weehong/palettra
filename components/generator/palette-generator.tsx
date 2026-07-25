@@ -181,9 +181,6 @@ export function PaletteGenerator({
 	applyToSiteEnabled = false,
 }: PaletteGeneratorProps): JSX.Element {
 	const [roles, setRoles] = useState<Array<ColorRole>>(initialTheme.roles);
-	const [semanticNamesLocked, setSemanticNamesLocked] = useState(
-		initialTheme.semanticNamesLocked ?? false,
-	);
 	const [typography, setTypography] = useState<Typography>(
 		initialTypography ?? defaultTypography(),
 	);
@@ -220,7 +217,6 @@ export function PaletteGenerator({
 					savedPalette: openedPalette,
 				}) => {
 					setRoles(theme.roles);
-					setSemanticNamesLocked(theme.semanticNamesLocked ?? false);
 					setTypography(nextTypography ?? defaultTypography());
 					setShowTypography(
 						nextTypography != null && !isDefaultTypography(nextTypography),
@@ -250,9 +246,8 @@ export function PaletteGenerator({
 				...role,
 				hex: effectiveHex(role, primaryHex),
 			})),
-			semanticNamesLocked,
 		}),
-		[roles, primaryHex, semanticNamesLocked],
+		[roles, primaryHex],
 	);
 
 	const palettes = useMemo<Array<Palette>>(
@@ -375,7 +370,6 @@ export function PaletteGenerator({
 
 	function handleNameChange(id: string, name: string): void {
 		patchRole(id, { name });
-		setSemanticNamesLocked(false);
 	}
 
 	function handleSemanticNameChange(
@@ -392,7 +386,6 @@ export function PaletteGenerator({
 				return { ...role, semanticNames };
 			}),
 		);
-		setSemanticNamesLocked(false);
 	}
 
 	function handleBulkSemanticNameChange(
@@ -414,7 +407,6 @@ export function PaletteGenerator({
 				return { ...role, semanticNames };
 			}),
 		);
-		setSemanticNamesLocked(false);
 	}
 
 	function handleToggleAuto(id: string): void {
@@ -463,7 +455,6 @@ export function PaletteGenerator({
 			}
 			return next;
 		});
-		setSemanticNamesLocked(false);
 		trackEvent("color_role_removed");
 	}
 
@@ -1168,9 +1159,6 @@ export function PaletteGenerator({
 				stitchSpec={stitchSpec}
 				open={isExportOpen}
 				onOpenChange={setExportOpen}
-				semanticNamesLocked={semanticNamesLocked}
-				onSemanticNameChange={handleSemanticNameChange}
-				onLockSemanticNames={() => setSemanticNamesLocked(true)}
 				shareHref={buildThemeHref(effectiveTheme, typography)}
 			/>
 		</div>

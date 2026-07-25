@@ -122,12 +122,7 @@ export function CollectionDialog({
 	});
 
 	function handleOpen(palette: SavedPalette): void {
-		const theme = {
-			roles: palette.roles,
-			...(palette.semanticNamesLocked !== undefined
-				? { semanticNamesLocked: palette.semanticNamesLocked }
-				: {}),
-		};
+		const theme = { roles: palette.roles };
 		const typography = palette.typography ?? undefined;
 		const savedPalette = { id: palette.id, name: palette.name };
 		if (!openPaletteOnCurrentPage({ theme, typography, savedPalette })) {
