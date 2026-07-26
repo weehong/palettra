@@ -35,26 +35,6 @@ describe("siteConfig.url resolution", () => {
 		expect(siteConfig.url).toBe("https://palettra.example");
 	});
 
-	it("falls back to the Vercel production domain", async () => {
-		const { siteConfig } = await loadSiteConfig({
-			NEXT_PUBLIC_SITE_URL: undefined,
-			VERCEL_PROJECT_PRODUCTION_URL: "ui-color-picker-preview.vercel.app",
-			VERCEL_URL: "ui-color-picker-preview-git-main.vercel.app",
-		});
-		expect(siteConfig.url).toBe("https://ui-color-picker-preview.vercel.app");
-	});
-
-	it("falls back to VERCEL_URL when no production domain is available", async () => {
-		const { siteConfig } = await loadSiteConfig({
-			NEXT_PUBLIC_SITE_URL: undefined,
-			VERCEL_PROJECT_PRODUCTION_URL: undefined,
-			VERCEL_URL: "ui-color-picker-preview-abc123.vercel.app",
-		});
-		expect(siteConfig.url).toBe(
-			"https://ui-color-picker-preview-abc123.vercel.app",
-		);
-	});
-
 	it("defaults to localhost outside Vercel", async () => {
 		const { siteConfig } = await loadSiteConfig({
 			NEXT_PUBLIC_SITE_URL: undefined,
@@ -70,6 +50,16 @@ describe("siteConfig.url resolution", () => {
 			NEXT_PUBLIC_SITE_URL: undefined,
 			VERCEL_PROJECT_PRODUCTION_URL: undefined,
 			VERCEL_URL: undefined,
+			NODE_ENV: "production",
+		});
+		expect(siteConfig.url).toBe("https://palettra.design");
+	});
+
+	it("keeps production canonicals on the custom domain instead of a Vercel hostname", async () => {
+		const { siteConfig } = await loadSiteConfig({
+			NEXT_PUBLIC_SITE_URL: undefined,
+			VERCEL_PROJECT_PRODUCTION_URL: "ui-color-picker-preview.vercel.app",
+			VERCEL_URL: "ui-color-picker-preview-abc123.vercel.app",
 			NODE_ENV: "production",
 		});
 		expect(siteConfig.url).toBe("https://palettra.design");
@@ -171,6 +161,32 @@ describe("robots", () => {
 		const result = robots();
 		expect(result.rules).toEqual({ userAgent: "*", allow: "/" });
 		expect(result.sitemap).toBe(`${siteConfig.url}/sitemap.xml`);
+	});
+});
+
+describe("generated color metadata", () => {
+	it("allows curated color pages to inherit the site's index policy", async () => {
+		const { generateMetadata } = await import("@/app/generate/[hex]/page");
+		const metadata = await generateMetadata({
+			params: Promise.resolve({ hex: POPULAR_COLOR_HEXES[0] }),
+			searchParams: Promise.resolve({}),
+		});
+
+		expect(metadata.robots).toBeUndefined();
+	});
+
+	it("prevents arbitrary generated color pages from entering the index", async () => {
+		const { generateMetadata } = await import("@/app/generate/[hex]/page");
+		const metadata = await generateMetadata({
+			params: Promise.resolve({ hex: "a543bc" }),
+			searchParams: Promise.resolve({}),
+		});
+
+		expect(metadata.robots).toEqual({
+			index: false,
+			follow: true,
+			googleBot: { index: false, follow: true },
+		});
 	});
 });
 

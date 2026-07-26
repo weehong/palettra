@@ -1,13 +1,12 @@
 "use client";
 
 import type { JSX } from "react";
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 import { SignInDialog } from "@/components/auth/sign-in-dialog";
 import { UserMenu } from "@/components/auth/user-menu";
 import { CollectionDialog } from "@/components/collection/collection-dialog";
-import { ContinuePaletteLink } from "@/components/generator/continue-palette-link";
 import { trackEvent } from "@/lib/analytics";
 import { siteConfig } from "@/lib/site-config";
 
@@ -34,9 +33,6 @@ export function Navbar(): JSX.Element {
 				</span>
 			</Link>
 			<nav aria-label="Account" className="flex items-center gap-2">
-				<Suspense fallback={null}>
-					<ContinuePaletteLink />
-				</Suspense>
 				<UserMenu
 					onSignInClick={() => setSignInOpen(true)}
 					onOpenCollection={openCollection}

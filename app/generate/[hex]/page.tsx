@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { notFound } from "next/navigation";
 
 import { generatePalette, normalizeHex } from "@/lib/color";
+import { POPULAR_COLOR_HEXES } from "@/lib/seo";
 import { siteConfig } from "@/lib/site-config";
 import type { Theme } from "@/lib/theme";
 import {
@@ -41,6 +42,7 @@ export async function generateMetadata({
 	const title = `${palette.name} (${normalized}) Tailwind color system`;
 	const description = `A production-ready Tailwind color system generated from ${normalized}, with 50–950 shades, UI previews, and export-ready tokens.`;
 	const canonicalPath = `/generate/${normalized.slice(1)}`;
+	const isCuratedColor = POPULAR_COLOR_HEXES.includes(normalized.slice(1));
 	return {
 		title,
 		description,
@@ -61,6 +63,15 @@ export async function generateMetadata({
 			description,
 			creator: siteConfig.twitterHandle,
 		},
+		...(isCuratedColor
+			? {}
+			: {
+					robots: {
+						index: false,
+						follow: true,
+						googleBot: { index: false, follow: true },
+					},
+				}),
 	};
 }
 

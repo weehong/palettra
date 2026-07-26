@@ -30,21 +30,12 @@ function resolveSiteUrl(): string {
 	) {
 		return fromEnv.replace(/\/$/, "");
 	}
-	// Vercel injects the project's production domain (e.g. <project>.vercel.app)
-	// into every deployment. Preferring it over the per-deployment VERCEL_URL
-	// keeps canonicals, sitemap, and OG URLs pointed at one stable origin even
-	// on preview deployments.
-	const vercelProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-	if (vercelProductionUrl && vercelProductionUrl.length > 0) {
-		return `https://${vercelProductionUrl}`;
+	// Canonical production URLs must never drift to a Vercel hostname when the
+	// custom-domain environment variable is missing or misconfigured.
+	if (process.env.NODE_ENV === "production") {
+		return PRODUCTION_SITE_URL;
 	}
-	const vercelUrl = process.env.VERCEL_URL;
-	if (vercelUrl && vercelUrl.length > 0) {
-		return `https://${vercelUrl}`;
-	}
-	return process.env.NODE_ENV === "production"
-		? PRODUCTION_SITE_URL
-		: LOCAL_SITE_URL;
+	return LOCAL_SITE_URL;
 }
 
 export type SiteConfig = {

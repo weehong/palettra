@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 import Link from "next/link";
 
+import { GROWTH_PAGES } from "@/lib/growth-pages";
 import { siteConfig } from "@/lib/site-config";
 
 export function Footer(): JSX.Element {
@@ -11,20 +12,36 @@ export function Footer(): JSX.Element {
 			<p>
 				Copyright {year} {siteConfig.name}. All rights reserved.
 			</p>
-			<nav aria-label="Legal" className="flex items-center gap-4">
-				<Link
-					href="/terms"
-					className="hover:text-foreground focus-visible:ring-ring font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+			<div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+				<nav
+					aria-label="Resources"
+					className="flex flex-wrap items-center gap-4"
 				>
-					Terms
-				</Link>
-				<Link
-					href="/privacy"
-					className="hover:text-foreground focus-visible:ring-ring font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
-				>
-					Privacy
-				</Link>
-			</nav>
+					{GROWTH_PAGES.map((page) => (
+						<Link
+							key={page.slug}
+							href={`/tools/${page.slug}`}
+							className="hover:text-foreground focus-visible:ring-ring font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+						>
+							{page.eyebrow}
+						</Link>
+					))}
+				</nav>
+				<nav aria-label="Legal" className="flex items-center gap-4">
+					<Link
+						href="/terms"
+						className="hover:text-foreground focus-visible:ring-ring font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+					>
+						Terms
+					</Link>
+					<Link
+						href="/privacy"
+						className="hover:text-foreground focus-visible:ring-ring font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+					>
+						Privacy
+					</Link>
+				</nav>
+			</div>
 		</footer>
 	);
 }

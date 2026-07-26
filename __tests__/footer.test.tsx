@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { Footer } from "@/components/layout/footer";
+import { GROWTH_PAGES } from "@/lib/growth-pages";
 import { siteConfig } from "@/lib/site-config";
 
 describe("Footer", () => {
@@ -21,5 +22,11 @@ describe("Footer", () => {
 			"href",
 			"/privacy",
 		);
+		for (const page of GROWTH_PAGES) {
+			expect(screen.getByRole("link", { name: page.eyebrow })).toHaveAttribute(
+				"href",
+				`/tools/${page.slug}`,
+			);
+		}
 	});
 });
