@@ -7,10 +7,16 @@ import Link from "next/link";
 import { SignInDialog } from "@/components/auth/sign-in-dialog";
 import { UserMenu } from "@/components/auth/user-menu";
 import { CollectionDialog } from "@/components/collection/collection-dialog";
+import { FeedbackLauncher } from "@/components/feedback/feedback-launcher";
 import { trackEvent } from "@/lib/analytics";
 import { siteConfig } from "@/lib/site-config";
 
-export function Navbar(): JSX.Element {
+type NavbarProps = {
+	/** Resolved server-side; see FeedbackLauncher. */
+	feedbackEnabled: boolean;
+};
+
+export function Navbar({ feedbackEnabled }: NavbarProps): JSX.Element {
 	const [signInOpen, setSignInOpen] = useState(false);
 	const [collectionOpen, setCollectionOpen] = useState(false);
 
@@ -33,6 +39,7 @@ export function Navbar(): JSX.Element {
 				</span>
 			</Link>
 			<nav aria-label="Account" className="flex items-center gap-2">
+				<FeedbackLauncher enabled={feedbackEnabled} />
 				<UserMenu
 					onSignInClick={() => setSignInOpen(true)}
 					onOpenCollection={openCollection}

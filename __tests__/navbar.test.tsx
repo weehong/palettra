@@ -62,7 +62,7 @@ describe("Navbar", () => {
 	it("renders the brand link even when auth is disabled", async () => {
 		const { Navbar } = await import("@/components/layout/navbar");
 
-		renderWithQuery(<Navbar />);
+		renderWithQuery(<Navbar feedbackEnabled={false} />);
 
 		const brand = screen.getByRole("link", { name: siteConfig.name });
 		expect(brand).toHaveAttribute("href", "/");
@@ -85,11 +85,26 @@ describe("Navbar", () => {
 		).not.toBeInTheDocument();
 	});
 
+	it("shows the feedback trigger only when the channel is configured", async () => {
+		const { Navbar } = await import("@/components/layout/navbar");
+
+		const { unmount } = renderWithQuery(<Navbar feedbackEnabled={false} />);
+		expect(
+			screen.queryByRole("button", { name: "Feedback" }),
+		).not.toBeInTheDocument();
+		unmount();
+
+		renderWithQuery(<Navbar feedbackEnabled />);
+		expect(
+			screen.getByRole("button", { name: "Feedback" }),
+		).toBeInTheDocument();
+	});
+
 	it("shows a sign-in button that opens the sign-in dialog when signed out", async () => {
 		authState.status = "signed-out";
 		const { Navbar } = await import("@/components/layout/navbar");
 
-		renderWithQuery(<Navbar />);
+		renderWithQuery(<Navbar feedbackEnabled={false} />);
 		fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
 		// Radix dialog content is portaled and only rendered while open.
@@ -111,7 +126,7 @@ describe("Navbar", () => {
 		};
 		const { Navbar } = await import("@/components/layout/navbar");
 
-		renderWithQuery(<Navbar />);
+		renderWithQuery(<Navbar feedbackEnabled={false} />);
 		// Radix menus open on pointer events, which fireEvent.click does not emit.
 		await userEvent.click(screen.getByRole("button", { name: /account/i }));
 		await userEvent.click(
@@ -135,7 +150,7 @@ describe("Navbar", () => {
 		authState.signOut.mockReturnValueOnce(new Promise(() => {}));
 		const { Navbar } = await import("@/components/layout/navbar");
 
-		renderWithQuery(<Navbar />);
+		renderWithQuery(<Navbar feedbackEnabled={false} />);
 		await userEvent.click(screen.getByRole("button", { name: /account/i }));
 		await userEvent.click(screen.getByRole("menuitem", { name: "Sign out" }));
 
@@ -157,7 +172,7 @@ describe("Navbar", () => {
 		};
 		const { Navbar } = await import("@/components/layout/navbar");
 
-		renderWithQuery(<Navbar />);
+		renderWithQuery(<Navbar feedbackEnabled={false} />);
 		await userEvent.click(screen.getByRole("button", { name: /account/i }));
 		await userEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
 
@@ -174,7 +189,7 @@ describe("Navbar", () => {
 		};
 		const { Navbar } = await import("@/components/layout/navbar");
 
-		renderWithQuery(<Navbar />);
+		renderWithQuery(<Navbar feedbackEnabled={false} />);
 		await userEvent.click(screen.getByRole("button", { name: /account/i }));
 		expect(
 			screen.queryByRole("menuitem", { name: "Terms" }),

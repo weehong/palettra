@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 import {
+	FEEDBACK_TEST_ENV,
 	FIREBASE_DISABLED_ENV,
 	FIREBASE_TEST_ENV,
 } from "./e2e/fixtures/firebase-env";
@@ -67,6 +68,7 @@ export default defineConfig({
 			// CI serves the prod build from the default .next.
 			env: {
 				...FIREBASE_TEST_ENV,
+				...FEEDBACK_TEST_ENV,
 				...(process.env.CI ? {} : { NEXT_DIST_DIR: ".next-e2e-on" }),
 			},
 			reuseExistingServer: false,

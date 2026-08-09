@@ -5,6 +5,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+import { isFeedbackConfigured } from "@/lib/feedback";
 import { siteConfig, isIndexable } from "@/lib/site-config";
 import {
 	getOrganizationStructuredData,
@@ -105,7 +106,7 @@ export default function RootLayout({
 					<div data-app-shell className="flex min-h-dvh flex-col">
 						<div className="flex min-h-0 flex-1 flex-col">
 							<WebVitals />
-							<Navbar />
+							<Navbar feedbackEnabled={isFeedbackConfigured(process.env)} />
 							{children}
 						</div>
 						<Footer />

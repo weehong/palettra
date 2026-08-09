@@ -85,6 +85,32 @@ Copy `.env.example` to `.env.local` for local Firebase and analytics settings.
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | No       | Optional Firebase messaging sender id.      |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID`            | No       | GA4 measurement id.                         |
 
+### Feedback Channel
+
+The navbar "Feedback" button opens a dialog that emails feedback, feature
+requests, and bug reports to the operator's mailbox over SMTP. Nothing is
+persisted and the submitter never gets an auto-reply — see
+[ADR 0001](docs/adr/0001-feedback-is-email-only.md) for why.
+
+| Variable             | Required | Description                                                       |
+| -------------------- | -------- | ----------------------------------------------------------------- |
+| `SMTP_HOST`          | Yes      | SMTP server, e.g. `smtp.gmail.com`.                               |
+| `SMTP_USER`          | Yes      | Authenticated transport account. Also the `From` address.         |
+| `SMTP_PASSWORD`      | Yes      | App password for that account.                                    |
+| `SMTP_PORT`          | No       | Defaults to `587` (STARTTLS). Port `465` uses implicit TLS.       |
+| `FEEDBACK_TO_EMAIL`  | No       | Destination mailbox. Defaults to `SMTP_USER`.                     |
+| `FEEDBACK_FROM_NAME` | No       | `From` display name. Defaults to `Palettra Feedback`.             |
+
+The button renders only when host, user, and password are all set, so an
+unconfigured deployment shows nothing rather than a button that always fails.
+That flag is resolved when a page is rendered, so a Docker deployment that
+supplies these variables only at `docker run` will not show the button on
+statically prebuilt routes — pass them at build time as well.
+
+Gmail app passwords are issued at <https://myaccount.google.com/apppasswords>.
+Microsoft/Outlook accounts are retiring basic-auth SMTP, so an Outlook
+user/password pair may be rejected even when it is correct.
+
 Enable Google, Twitter, and Facebook sign-in providers in Firebase
 Authentication if account features are used. Deploy the owner-scoped Firestore
 rules from this repository:

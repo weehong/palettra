@@ -14,6 +14,18 @@ export const FIREBASE_TEST_ENV = {
 } as const;
 
 /**
+ * Dummy SMTP config so the navbar "Feedback" button renders. No mail can
+ * escape: e2e/feedback.spec.ts stubs POST /api/feedback at the network layer,
+ * and the host below does not resolve.
+ */
+export const FEEDBACK_TEST_ENV = {
+	SMTP_HOST: "smtp.invalid",
+	SMTP_USER: "e2e@palettra.invalid",
+	SMTP_PASSWORD: "e2e-app-password",
+	FEEDBACK_TO_EMAIL: "operator@palettra.invalid",
+} as const;
+
+/**
  * Explicit empty strings so the disabled-state server on port 3001 ignores
  * any real Firebase values in a developer's local .env file.
  */

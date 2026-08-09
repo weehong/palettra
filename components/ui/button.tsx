@@ -16,6 +16,10 @@ const buttonVariants = cva(
 					"border-input bg-card text-foreground hover:bg-muted hover:text-foreground border",
 				secondary:
 					"bg-secondary text-secondary-foreground hover:bg-secondary/80",
+				// Salmon is only ~2.2:1 on light surfaces, so the accent token is
+				// only ever a fill paired with accent-foreground — never accent
+				// text or an accent border (see app/globals.css).
+				accent: "bg-accent text-accent-foreground hover:bg-accent/90",
 				ghost: "hover:bg-muted hover:text-foreground",
 				link: "text-primary underline-offset-4 hover:underline",
 			},

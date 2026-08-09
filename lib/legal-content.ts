@@ -133,8 +133,8 @@ export const termsDocument: LegalDocument = {
 export const privacyDocument: LegalDocument = {
 	title: "Privacy Policy",
 	description:
-		"Privacy Policy for Palettra, covering account data, saved palettes, analytics, third-party providers, retention, and deletion.",
-	lastUpdated: "July 5, 2026",
+		"Privacy Policy for Palettra, covering account data, saved palettes, feedback submissions, analytics, third-party providers, retention, and deletion.",
+	lastUpdated: "August 9, 2026",
 	intro: [
 		"This Privacy Policy explains how Palettra collects, uses, shares, and protects information when you use the service.",
 		"This Privacy Policy is a working draft for the site owner to review before launch and is not legal advice.",
@@ -151,9 +151,18 @@ export const privacyDocument: LegalDocument = {
 			],
 		},
 		{
+			title: "Feedback and feature requests",
+			body: [
+				"When you send feedback, a feature request, or a bug report through the feedback form, Palettra collects the message you write, the kind of message you selected, and the email address you optionally provide.",
+				"Providing an email address is optional. The form works without one. When you do provide it, it is used only to reply to you about that submission, including telling you if a requested feature ships. It is not added to a mailing list and is not used for marketing.",
+				"Feedback submissions are delivered by email to the operator's mailbox through a third-party mail provider such as Google. They are not stored in a Palettra database, and there is no in-product record of them.",
+				"To limit automated abuse, the feedback endpoint counts recent requests per network address in server memory. These counts are transient, are not written to durable storage, and are discarded when the server process restarts.",
+			],
+		},
+		{
 			title: "Information you should not provide",
 			body: [
-				"Do not enter sensitive personal information, secrets, credentials, regulated data, confidential business information, or information you do not have the right to use in palette names, imported palette data, URLs, exports, or AI-assisted inputs.",
+				"Do not enter sensitive personal information, secrets, credentials, regulated data, confidential business information, or information you do not have the right to use in palette names, imported palette data, URLs, exports, AI-assisted inputs, or feedback submissions.",
 			],
 		},
 		{
@@ -166,6 +175,7 @@ export const privacyDocument: LegalDocument = {
 				"operate, secure, debug, measure, and improve the service;",
 				"understand feature usage and performance through analytics, when analytics are configured;",
 				"generate optional AI-assisted site-theme suggestions, when those features are enabled;",
+				"receive and reply to feedback, feature requests, and bug reports you send us;",
 				"comply with legal obligations and enforce the Terms and Conditions.",
 			],
 		},
@@ -188,12 +198,14 @@ export const privacyDocument: LegalDocument = {
 			body: [
 				"Firebase Authentication is used for sign-in, and Cloud Firestore is used for saved palette storage when Firebase is configured. Google Analytics is used only when a Google Analytics measurement ID is configured.",
 				"Sign-in providers such as Google, Facebook, and X/Twitter process information according to their own terms and privacy policies. Optional AI providers, if enabled, process submitted theme data according to their own terms and privacy policies.",
+				"When the feedback form is enabled, a third-party mail provider such as Google delivers feedback submissions to the operator's mailbox and processes them according to its own terms and privacy policy.",
 			],
 		},
 		{
 			title: "Retention and deletion",
 			body: [
 				"Saved palettes remain stored until you delete them, delete your account, or until Palettra removes them under these Terms or applicable law.",
+				"Feedback submissions remain in the operator's mailbox for as long as they are useful for replying to you and improving the service, subject to the mail provider's own retention policies.",
 				"You can delete your account from the settings page when account features are enabled. Account deletion attempts to delete saved palette data first and then delete the Firebase Authentication account. Some provider, backup, log, analytics, or legal-retention copies may persist for a limited period according to the relevant provider's policies or legal obligations.",
 			],
 		},
